@@ -1,0 +1,43 @@
+{
+  "autoDocstring.docstringFormat": "numpy",
+  "python.languageServer": "Pylance",
+  "editor.formatOnSave": true,
+  "editor.codeLens": true,
+  "python.analysis.autoImportCompletions": true,
+  "code-runner.executorMap": {
+    "python": "/Users/rajmani/Documents/research/Home/python/algorithms_interview/py_env/bin/python3"
+  },
+  "code-runner.clearPreviousOutput": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "git.ignoreLimitWarning": true,
+  "terminal.integrated.env.osx": {
+    "PYTHONPATH": "/Users/rajmani/Documents/research/Home/python/algorithms_interview"
+  },
+  "jupyter.notebookFileRoot": "${workspaceFolder}",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  },
+  "python.testing.unittestArgs": [
+    "-v",
+    "-s",
+    ".",
+    "-p",
+    "*test*.py"
+  ],
+  "python.testing.pytestArgs": [
+    "-v",
+    "--cov-report=html",
+    "tests/"
+  ],
+  "python.testing.unittestEnabled": true,
+  "python.testing.pytestEnabled": true,
+  "editor.quickSuggestions": {
+    "other": "on",
+    "comments": "off",
+    "strings": "on"
+  },
+  "editor.suggestOnTriggerCharacters": true
+}

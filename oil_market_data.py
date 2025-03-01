@@ -13,21 +13,33 @@ import requests
 from dataclasses import dataclass
 import os
 import numpy as np
+from enum import Enum
+
+
+class DataSourceConfig(Enum):
+    BAKER_HUGES_RIG_COUNT = "https://rigcount.bakerhuges.com/na-rig-count"
+    EIA_INVENTORY = "https://api.eia.gov/v2/petroleum/stoc/wstk/data/"
+    YAHOO_FINANCE_WTI = "CL=F"
+    YAHOO_FINANCE_BRENT = "BZ=F"
+    YAHOO_FINANCE_OVX = "^OVX"
 
 
 @dataclass
 class OilMarketData:
-    start_date: str = "2023-01-01"
-    end_date: str = "2023-01-10"
+    start_date: str
+    end_date: str
 
     def get_oil_prices(self):
         """Fetches historical WTI and Brent Oil Prices from Yahoo Finance"""
+        wti_ticker = DataSourceConfig.YAHOO_FINANCE_WTI.value
         wti = yf.download(
-            "CL=F", start=self.start_date, end=self.end_date, progress=True
+            wti_ticker, start=self.start_date, end=self.end_date, progress=True
         ).droplevel(level=1, axis=1)["Close"]
 
+        brent_ticker = DataSourceConfig.YAHOO_FINANCE_BRENT.value
+
         brent = yf.download(
-            "BZ=F", start=self.start_date, end=self.end_date, progress=True
+            brent_ticker, start=self.start_date, end=self.end_date, progress=True
         ).droplevel(level=1, axis=1)["Close"]
         oil_prices = pd.DataFrame({"WTI": wti, "Brent": brent})
         oil_prices["WTI-Brent Spread"] = oil_prices["WTI"] - oil_prices["Brent"]
@@ -35,15 +47,16 @@ class OilMarketData:
 
     def get_oil_volatility(self):
         """Fetch historical Oil Volatility Index (OVX) from Yahoo Finance"""
+        ovx_ticker = DataSourceConfig.YAHOO_FINANCE_OVX.value
         ovx = yf.download(
-            "^OVX", start=self.start_date, end=self.end_date, progress=True
+            ovx_ticker, start=self.start_date, end=self.end_date, progress=True
         ).droplevel(level=1, axis=1)["Close"]
         return pd.DataFrame({"OVX (Oil VIX)": ovx})
 
     def get_eia_inventory(self, api_key: str):
         """Fetch historical Crude_Oil_Inventory"Crude_Oil_Inventory" data from the EIA API"""
 
-        url = "https://api.eia.gov/v2/petroleum/stoc/wstk/data/"
+        eia_url = DataSourceConfig.EIA_INVENTORY.value
 
         params = {
             "api_key": api_key,
@@ -60,7 +73,7 @@ class OilMarketData:
             "length": 100,
         }
 
-        res = requests.get(url, params=params)
+        res = requests.get(eia_url, params=params)
         if res.status_code != 200:
             raise Exception(f"Failed to fetch data: {res.status_code}, {res.text}")
 
@@ -85,13 +98,41 @@ class OilMarketData:
 
         return inventory_data
 
-    def get_oil_data(self, api_key: str):
+    def get_us_rig_count() -> pd.DataFrame:
+        url = DataSourceConfig.BAKER_HUGES_RIG_COUNT.value
+        tables = pd.read_html(url)
+
+        # assume table 0 is weekl rig count (need to check)
+        weekly_table: pd.DataFrame = tables[0]
+
+        # extract relevant column names
+        weekly_table.columns = [
+            "Date",
+            "Total US",
+            "Oil",
+            "Gas",
+            "Misc",
+            "Gulf Of Mexico",
+        ]
+
+        # convert Date to datetime object
+        weekly_table["Date"] = pd.to_datetime(weekly_table["Date"])
+
+        # Filter for appropriate columns
+        weekly_table = weekly_table[["Date", "Total US", "Oil", "Gas"]]
+
+        return weekly_table
+
+    def add_rig_count_to_master(master_df: pd.DataFrame) -> pd.DataFrame:
+        pass
+
+    def get_oil_data(self, api_key: str) -> pd.DataFrame:
         oil_prices = self.get_oil_prices()
         oil_vol = self.get_oil_volatility()
         oil_inventory = self.get_eia_inventory(api_key)
 
-        all_data = self.preprocess_oil_data(oil_prices, oil_inventory, oil_vol)
-        return all_data
+        master_df = self.preprocess_oil_data(oil_prices, oil_inventory, oil_vol)
+        return master_df
 
     def preprocess_oil_data(
         self,
