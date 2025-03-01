@@ -5,7 +5,7 @@
   "editor.codeLens": true,
   "python.analysis.autoImportCompletions": true,
   "code-runner.executorMap": {
-    "python": "/Users/rajmani/Documents/research/Home/python/algorithms_interview/py_env/bin/python3"
+    "python": "/Users/rajmani/Documents/research/Home/python/oil-market-dashboard/py_env/bin/python3"
   },
   "code-runner.clearPreviousOutput": true,
   "editor.codeActionsOnSave": {
@@ -13,7 +13,7 @@
   },
   "git.ignoreLimitWarning": true,
   "terminal.integrated.env.osx": {
-    "PYTHONPATH": "/Users/rajmani/Documents/research/Home/python/algorithms_interview"
+    "PYTHONPATH": "/Users/rajmani/Documents/research/Home/python/oil-market-dashboard"
   },
   "jupyter.notebookFileRoot": "${workspaceFolder}",
   "[python]": {

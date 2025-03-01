@@ -13,7 +13,7 @@
             "stopOnEntry": false,
             "cwd": "${fileDirname}",
             "env": {
-                "PYTHONPATH": "/Users/rajmani/Documents/research/Home/python/algorithms_interview"
+                "PYTHONPATH": "/Users/rajmani/Documents/research/Home/python/oil-market-dashboard"
             }
         }
     ]
