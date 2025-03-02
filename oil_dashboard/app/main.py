@@ -75,7 +75,9 @@ def create_dashboard():
     # --- Price Trends (Full Width) ---
     st.subheader("Crude Oil Price Trends")
     selected_prices = st.multiselect(
-        "Select Price Series", ["WTI", "Brent"], default=["WTI", "Brent"]
+        "Select Price Series",
+        ["WTI", "Brent", "WTI-Brent Spread"],
+        default=["WTI", "Brent"],
     )
     if selected_prices:
         fig_prices = px.line(
