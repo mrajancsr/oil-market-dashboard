@@ -39,12 +39,12 @@ class BakerHughesSource(DataSource):
             "Date": pd.to_datetime(
                 us_rig_data[BAKER_HUGHES_COLUMNS_US["date"]], format="%d %b %Y"
             ),
-            "US_Rig_Count": int(us_rig_data[BAKER_HUGHES_COLUMNS_US["count"]]),
-            "Weekly_Change": int(us_rig_data[BAKER_HUGHES_COLUMNS_US["weekly_change"]]),
-            "Prior_Week_Date": pd.to_datetime(
+            "US Rig Count": int(us_rig_data[BAKER_HUGHES_COLUMNS_US["count"]]),
+            "Weekly Change": int(us_rig_data[BAKER_HUGHES_COLUMNS_US["weekly_change"]]),
+            "Prior Week Date": pd.to_datetime(
                 us_rig_data[BAKER_HUGHES_COLUMNS_US["prior_week_count_date"]]
             ),
-            "Yearly_Change": int(us_rig_data[BAKER_HUGHES_COLUMNS_US["yearly_change"]]),
+            "Yearly Change": int(us_rig_data[BAKER_HUGHES_COLUMNS_US["yearly_change"]]),
         }
 
         return pd.DataFrame([data])
