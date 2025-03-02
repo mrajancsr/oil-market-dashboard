@@ -1,20 +1,25 @@
-import streamlit as st
+import os
+from datetime import datetime
+
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
+import streamlit as st
 
 
 # --- Load Data ---
 @st.cache_data
-def load_data(file_name: str = "oil_historical_market_data.csv"):
-    df = pd.read_csv(file_name, parse_dates=["Date"])
+def load_data(file_name: str = "oil_market_data.csv"):
+    # Dynamically find the `data` folder relative to this script's location
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, "../../"))
+    data_file = os.path.join(project_root, "data", file_name)
+    df = pd.read_csv(data_file, parse_dates=["Date"])
     df.set_index("Date", inplace=True)
     return df
 
 
 # --- Helper Functions ---
 def format_large_number(value):
-    """Format large numbers into K (thousands) or M (millions) with units."""
     if value >= 1_000_000:
         return f"{value / 1_000_000:.2f} M BBL"
     elif value >= 1_000:
@@ -44,14 +49,13 @@ def create_dashboard():
     col3.metric("WTI-Brent Spread", f"{spread:+.2f}")
 
     col1.metric(
-        "Crude Inventory",
-        format_large_number(df["Crude_Oil_Inventory"].iloc[-1]),
+        "Crude Inventory", format_large_number(df["Crude Oil Inventory"].iloc[-1])
     )
     col2.metric(
         "Weekly Inventory Change",
-        format_large_number(df["Weekly_Inventory_Change"].iloc[-1]),
+        format_large_number(df["Weekly Inventory Change"].iloc[-1]),
     )
-    col3.metric("OVX (Oil Volatility Index)", f"{df['OVX (Oil VIX)'].iloc[-1]:.2f}")
+    col3.metric("OVX (Oil Volatility Index)", f"{df['OVX'].iloc[-1]:.2f}")
 
     st.markdown("---")
 
@@ -68,64 +72,65 @@ def create_dashboard():
 
     st.markdown("---")
 
-    # --- Price Trend Chart ---
+    # --- Price Trends (Full Width) ---
     st.subheader("Crude Oil Price Trends")
     selected_prices = st.multiselect(
         "Select Price Series", ["WTI", "Brent"], default=["WTI", "Brent"]
     )
-
     if selected_prices:
         fig_prices = px.line(
             filtered_df,
             x=filtered_df.index,
             y=selected_prices,
             labels={"value": "Price (USD)", "variable": "Oil Type"},
-            title="WTI & Brent Prices Over Time",
+            title="WTI & Brent Prices",
         )
-        st.plotly_chart(fig_prices)
+        st.plotly_chart(fig_prices, use_container_width=True)
 
-    # --- Volatility Chart ---
+    # --- Volatility Chart (Full Width) ---
     st.subheader("Oil Volatility Index (OVX)")
     fig_ovx = px.line(
         filtered_df,
         x=filtered_df.index,
-        y="OVX (Oil VIX)",
-        labels={"OVX (Oil VIX)": "OVX (Volatility Index)"},
-        title="Oil Market Volatility (OVX) Over Time",
+        y="OVX",
+        labels={"OVX": "OVX (Volatility Index)"},
+        title="Oil Market Volatility (OVX)",
     )
-    st.plotly_chart(fig_ovx)
+    st.plotly_chart(fig_ovx, use_container_width=True)
 
-    # --- Inventory Change Chart ---
+    # --- Inventory Change Chart (Full Width) ---
     st.subheader("Weekly Crude Oil Inventory Change")
     fig_inventory = px.line(
         filtered_df,
         x=filtered_df.index,
-        y="Weekly_Inventory_Change",
-        labels={"Weekly_Inventory_Change": "Inventory Change (BBL)"},
+        y="Weekly Inventory Change",
+        labels={"Weekly Inventory Change": "Inventory Change (BBL)"},
         title="Weekly Inventory Change Over Time",
     )
-    st.plotly_chart(fig_inventory)
+    st.plotly_chart(fig_inventory, use_container_width=True)
 
-    # --- Inventory vs Price Scatter Plot ---
+    # --- Inventory vs WTI Price Change (Full Width) ---
     st.subheader("Inventory Change vs WTI Weekly Price Change")
-    if "WTI_Weekly_Price_Change" not in df.columns:
-        df["WTI_Weekly_Price_Change"] = df["WTI"].pct_change(5) * 100
-
+    if "WTI Weekly Price Change" not in df.columns:
+        df["WTI Weekly Price Change"] = df["WTI"].pct_change(5) * 100
     filtered_df = df.loc[date_range[0] : date_range[1]]
+
     fig_scatter = px.scatter(
         filtered_df,
-        x="Weekly_Inventory_Change",
-        y="WTI_Weekly_Price_Change",
+        x="Weekly Inventory Change",
+        y="WTI Weekly Price Change",
         title="Inventory Change vs WTI Weekly Price Change",
         labels={
-            "Weekly_Inventory_Change": "Weekly Inventory Change (BBL)",
-            "WTI_Weekly_Price_Change": "WTI Weekly Price Change (%)",
+            "Weekly Inventory Change": "Weekly Inventory Change (BBL)",
+            "WTI Weekly Price Change": "WTI Weekly Price Change (%)",
         },
         trendline="ols",
     )
-    st.plotly_chart(fig_scatter)
+    st.plotly_chart(fig_scatter, use_container_width=True)
 
-    # --- Observations & Insights ---
+    st.markdown("---")
+
+    # --- Observations & Insights (Full Width) ---
     st.subheader("📝 Observations & Insights")
     st.markdown(
         """
@@ -165,7 +170,7 @@ def create_dashboard():
         mime="text/csv",
     )
 
-    # --- Data Preview ---
+    # --- Data Preview (Full Width) ---
     st.subheader("🔍 Preview Latest Data")
     st.dataframe(filtered_df.tail(10))
 

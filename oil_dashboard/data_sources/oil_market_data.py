@@ -7,13 +7,14 @@ This script collects historical oil market data, including
 The data is processed and saved for further analysis
 """
 
-import yfinance as yf
+import os
+from dataclasses import dataclass
+from enum import Enum
+
+import numpy as np
 import pandas as pd
 import requests
-from dataclasses import dataclass
-import os
-import numpy as np
-from enum import Enum
+import yfinance as yf
 
 
 class DataSourceConfig(Enum):
