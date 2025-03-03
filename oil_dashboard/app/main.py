@@ -270,7 +270,7 @@ def create_dashboard():
     st.markdown("---")
 
     # --- Observations & Insights ---
-    st.subheader("📝 Observations & Insights")
+    st.subheader("📝 Commentary & Insights")
     st.markdown(
         """
         ### Key Observations (2024):
