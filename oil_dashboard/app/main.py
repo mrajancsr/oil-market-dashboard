@@ -273,21 +273,56 @@ def create_dashboard():
     st.subheader("📝 Observations & Insights")
     st.markdown(
         """
-        ### Price Trends
-        - WTI and Brent prices fluctuated significantly due to macroeconomic and geopolitical factors.
-        - Inventory draws and builds influenced short-term pricing, but broader trends tied to global demand and OPEC actions.
+        ### Key Observations (2024):
 
-        ### Inventory Insights
-        - Inventory builds tend to cap price rallies, especially when refinery throughput drops.
-        - Large inventory draws often coincide with rising OVX, indicating higher uncertainty.
+        - **Oil Price Trends:** 
+            - WTI and Brent prices experienced moderate fluctuations in early 2024, with a brief period of stability in mid-year.
+            - However, towards Q3, prices exhibited increased volatility, potentially driven by external geopolitical risks, macroeconomic uncertainties, and seasonal demand patterns.
 
-        ### Volatility Dynamics
-        - OVX spikes are often linked to geopolitical risk events or sudden shifts in OPEC policy.
+        - **WTI-Brent Spread:**
+            - The spread remained relatively narrow for much of the year, indicating **balanced global supply dynamics**.
+            - Temporary spikes in the spread were noted, potentially related to refinery outages or temporary disruptions in specific regions (e.g., North Sea production issues).
+
+        - **Crude Oil Inventory (Weekly Change):**
+            - Inventory data showed **substantial weekly variability**, highlighting how **unexpected inventory builds or draws** can contribute to short-term price swings.
+            - Despite the common belief that inventory strongly influences prices, the correlation between weekly inventory changes and WTI price changes appears weak in the analyzed period. This aligns with broader market understanding that **inventory is only one of several price drivers**.
+
+        - **Oil Volatility Index (OVX):**
+            - OVX started the year at elevated levels around **40**, gradually declining to the **25 range** by mid-year.
+            - This decline likely reflects **increased supply clarity from OPEC+ and reduced near-term uncertainty**.
+            - However, from **July to October**, OVX spiked sharply — this may have been linked to:
+                - **Geopolitical tensions** (Middle East unrest or US-Iran disputes).
+                - **Hurricane season disruptions** impacting Gulf Coast production.
+                - **OPEC+ surprises** or **macro shocks** such as renewed recession fears.
+            - By **November**, volatility subsided again, reflecting **greater market clarity on year-end supply/demand balance** and positioning ahead of 2025.
+
+        ### Broader Insights:
+
+        - **Crude prices are influenced by a combination of factors**, including:
+            - Geopolitical risks
+            - OPEC+ production decisions
+            - Macroeconomic outlook (recession fears, central bank policy)
+            - Seasonal demand patterns
+            - Inventory changes (but only in context with broader fundamentals)
+
+        - **The weak correlation between inventory changes and price changes reinforces that oil prices are forward-looking.** 
+            - Markets tend to price in future supply/demand expectations rather than react solely to past inventory reports.
+            - However, significant inventory surprises (unexpected draws or builds) still contribute to short-term volatility, particularly if they conflict with market consensus.
+
+        - **The importance of volatility monitoring:**
+            - OVX provides a useful gauge of **market sentiment and risk premium**.
+            - Spikes in OVX often align with geopolitical events or unexpected policy shifts, making it a valuable leading indicator of market stress.
+
+        ### Key Takeaway for Traders:
+        - **While inventory data is important, it’s only one piece of the puzzle.**
+        - Successful trading strategies in oil markets must incorporate a **broader view that blends fundamentals (inventory, supply/demand) with macroeconomic data, geopolitical analysis, and market sentiment (volatility indices like OVX).**
+
+
 
         ### Technical Takeaways
         - RSI over 70 often preceded pullbacks.
         - MACD crossovers caught some trends but struggled during sideways periods.
-        """
+"""
     )
 
     st.markdown("---")
