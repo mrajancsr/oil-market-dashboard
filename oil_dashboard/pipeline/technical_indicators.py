@@ -2,6 +2,8 @@ from typing import List
 
 import pandas as pd
 
+from oil_dashboard.utils.dataframe_utils import validate_column_presence
+
 
 def calculate_moving_average(
     df: pd.DataFrame, column: str, windows: List[int] = [50, 200]
@@ -14,8 +16,8 @@ def calculate_moving_average(
         DataFrame containing price data
     column : str
         Column name to calculate MAs for
-    windows : List[int], optional, default [50, 100]
-        List of moving average windows to calculate
+    windows : List[int], optional
+        moving average windows to calculate, by default [50, 100]
 
     Returns
     -------
@@ -27,22 +29,153 @@ def calculate_moving_average(
     KeyError
         if the particular column is not found
     """
-    if column not in df:
-        raise KeyError(f"Column {column} not in dataframe")
+    validate_column_presence(df, column)
 
-    for window in windows:
-        df[f"{column}_MA{window}"] = df[column].rolling(window).mean()
+    if len(df) < max(windows):
+        raise ValueError(
+            f"Not enough data points ({len(df)}) to calculate {max(windows)}-day MA."
+        )
 
-    return df
+    return df.assign(
+        **{
+            f"{column}_MA{window}": df[column].rolling(window).mean()
+            for window in windows
+        }
+    ).copy()
 
 
 def calculate_bollinger_bands(
     df: pd.DataFrame, column: str, window: int = 20
 ) -> pd.DataFrame:
-    pass
+    """Calculate Bollinger Bands
+
+    Upper Band = MA + 2 * Std Dev
+    Lower Band = MA - 2 * Std Dev
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing price data
+    column : str
+        Column name to calculate Bollinger Bands
+    window : int, optional
+        Rolling window for Bollinger Bands, by default 20
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with upper and lower Bollinger Bands columns
+
+    Raises
+    ------
+    KeyError
+        If column name is not found in price data
+    """
+
+    validate_column_presence(df, column)
+
+    rolling_mean = df[column].rolling(window=window).mean()
+    rolling_std = df[column].rolling(window=window).std()
+
+    return df.assign(
+        **{
+            f"{column}_BB_Upper": rolling_mean + (2 * rolling_std),
+            f"{column}_BB_Lower": rolling_mean - (2 * rolling_std),
+        }
+    ).copy()
 
 
-def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
+def calculate_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
+    """Calculate the Relative Strength Index
+
+    RSI = 100 - (100 / (1 + RS))
+    RS = Average Gain / Average Loss
+
+    Parameters
+    ----------
+    prices : pd.Series
+        Price Series (typically closing prices)
+    window : int, optional
+        Number of periods for RSI calculation, by default 14
+
+    Returns
+    -------
+    pd.Series
+        RSI values
+    """
+    if len(prices) < window:
+        raise ValueError(
+            f"Not enough data points ({len(prices)}) to calculate {window}-day RSI."
+        )
+    delta = prices.diff()
+
+    gain = delta.where(delta > 0, 0.0)
+    loss = -delta.where(delta < 0, 0.0)
+
+    avg_gain = gain.rolling(window=window, min_periods=window).mean()
+    avg_loss = loss.rolling(window=window, min_periods=window).mean()
+
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi
+
+
+def calculate_macd(
+    df: pd.DataFrame,
+    column: str = "WTI",
+    fast: int = 12,
+    slow: int = 26,
+    signal: int = 9,
+) -> pd.DataFrame:
+    """Calculate MACD and MACD Signal Line
+
+    MACD = EMA(12) - EMA(26)
+    Signal Line = EMA(9) of MACD
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing price data
+    column : str, optional
+        Column to calculate MACD for, by default "WTI"
+    fast : int, optional
+        Fast EMA period, by default 12
+    slow : int, optional
+        Slow EMA period, by default 26
+    signal : int, optional
+        Signal Line EMA period, by default 9
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with MACD and MACD Signal Columns
+
+    Raises
+    ------
+    KeyError
+        if column not found in DataFrame
+    """
+    validate_column_presence(df, column)
+
+    if len(df) < slow:
+        raise ValueError(
+            f"Not enough data points ({len(df)}) to calculate {slow}-day MACD."
+        )
+
+    exp12 = df[column].ewm(span=fast, adjust=False).mean()
+    exp26 = df[column].ewm(span=slow, adjust=False).mean()
+    return df.assign(
+        **{
+            f"{column}_MACD": exp12 - exp26,
+            f"{column}_MACD_Signal": (exp12 - exp26)
+            .ewm(span=signal, adjust=False)
+            .mean(),
+        }
+    ).copy()
+
+
+def add_technical_indicators(df: pd.DataFrame, column: str = "WTI") -> pd.DataFrame:
     """
     Add technical indicators to the oil price data.
 
@@ -56,30 +189,13 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         DataFrame with new columns for technical indicators.
     """
+    validate_column_presence(df, column)
     # Ensure Date index is sorted (just in case)
     df = df.sort_index()
 
-    # --- Moving Averages ---
-    df["WTI_MA50"] = df["WTI"].rolling(window=50).mean()
-    df["WTI_MA200"] = df["WTI"].rolling(window=200).mean()
-
-    # --- Bollinger Bands ---
-    rolling_mean = df["WTI"].rolling(window=20).mean()
-    rolling_std = df["WTI"].rolling(window=20).std()
-    df["WTI_BB_Upper"] = rolling_mean + (2 * rolling_std)
-    df["WTI_BB_Lower"] = rolling_mean - (2 * rolling_std)
-
-    # --- RSI ---
-    delta = df["WTI"].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    df["WTI_RSI"] = 100 - (100 / (1 + rs))
-
-    # --- MACD ---
-    exp12 = df["WTI"].ewm(span=12, adjust=False).mean()
-    exp26 = df["WTI"].ewm(span=26, adjust=False).mean()
-    df["WTI_MACD"] = exp12 - exp26
-    df["WTI_MACD_Signal"] = df["WTI_MACD"].ewm(span=9, adjust=False).mean()
+    df = calculate_moving_average(df, column)
+    df = calculate_bollinger_bands(df, column)
+    df[f"{column}_RSI"] = calculate_rsi(df[column])
+    df = calculate_macd(df, column)
 
     return df
