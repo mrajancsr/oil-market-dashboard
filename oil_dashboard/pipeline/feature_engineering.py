@@ -3,6 +3,8 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
+from oil_dashboard.pipeline.technical_indicators import add_technical_indicators
+
 
 def generate_features(
     data_frames: Dict[str, pd.DataFrame],
@@ -46,30 +48,30 @@ def generate_features(
     oil_data["Brent Log Return"] = np.log(1 + oil_data["Brent"].pct_change())
     oil_data["WTI-Brent Spread"] = oil_data["WTI"] - oil_data["Brent"]
 
-    # calculate weekly moving averages and volatility
+    # weekly moving averages and volatility
     oil_data["WTI-7D MA"] = oil_data["WTI"].rolling(7).mean()
     oil_data["Brent-7D MA"] = oil_data["Brent"].rolling(7).mean()
     oil_data["OVX 7D MA"] = oil_data["OVX"].rolling(7).mean()
     oil_data["WTI Rolling Volatility"] = oil_data["WTI Log Return"].rolling(7).std()
     oil_data["WTI Momentum"] = oil_data["WTI"].pct_change(5)
 
-    # calculate weekly inventory change and percentage changes
+    # weekly inventory change and z-scores
     oil_inventory["Weekly Inventory Change"] = oil_inventory[
         "Crude Oil Inventory"
     ].diff()
     oil_inventory["Weekly Percent Change"] = oil_inventory[
         "Crude Oil Inventory"
     ].pct_change()
-
-    # Resample inventory to daily and calculate inventory anomalies
     inventory_daily = oil_inventory.resample("D").ffill()
-    # inventory anomalies
     inventory_daily["Inventory Zscore"] = (
         inventory_daily["Crude Oil Inventory"]
         - inventory_daily["Crude Oil Inventory"].mean()
     ) / inventory_daily["Crude Oil Inventory"].std()
 
-    # join into a master data
-    master_data = oil_data.join(inventory_daily, how="outer").ffill()
+    # merge to master DataFrame
+    master_df = oil_data.join(inventory_daily, how="outer").ffill()
 
-    return master_data
+    # Add technical indicators via helper function
+    master_df = add_technical_indicators(master_df)
+
+    return master_df

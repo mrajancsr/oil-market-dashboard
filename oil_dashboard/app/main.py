@@ -1,6 +1,6 @@
 import os
-from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -9,7 +9,6 @@ import streamlit as st
 # --- Load Data ---
 @st.cache_data
 def load_data(file_name: str = "oil_market_data.csv"):
-    # Dynamically find the `data` folder relative to this script's location
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(current_dir, "../../"))
     data_file = os.path.join(project_root, "data", file_name)
@@ -40,7 +39,7 @@ def create_dashboard():
     st.title("🛢️ Kempstar Crude Oil Fundamental Price Monitoring Dashboard")
     st.caption("Data sourced from Yahoo Finance & EIA | Developed by Rajan Subramanian")
 
-    # --- Top Section: Key Metrics ---
+    # --- Key Metrics Section ---
     st.header("Market Overview")
     col1, col2, col3 = st.columns(3)
     col1.metric("WTI Price", f"${df['WTI'].iloc[-1]:.2f}")
@@ -59,7 +58,7 @@ def create_dashboard():
 
     st.markdown("---")
 
-    # --- Date Range Filter ---
+    # --- Date Range Selector ---
     st.subheader("Select Date Range for Analysis")
     date_range = st.slider(
         "Select Date Range",
@@ -72,105 +71,163 @@ def create_dashboard():
 
     st.markdown("---")
 
-    # --- Price Trends (Full Width) ---
-    st.subheader("Crude Oil Price Trends")
-    selected_prices = st.multiselect(
-        "Select Price Series", ["WTI", "Brent"], default=["WTI", "Brent"]
-    )
-    if selected_prices:
-        fig_prices = px.line(
+    # --- Price and Volatility Charts (Full Width) ---
+    st.subheader("Price & Volatility Trends")
+
+    st.plotly_chart(
+        px.line(
             filtered_df,
             x=filtered_df.index,
-            y=selected_prices,
+            y=["WTI", "Brent"],
             labels={"value": "Price (USD)", "variable": "Oil Type"},
-            title="WTI & Brent Prices",
-        )
-        st.plotly_chart(fig_prices, use_container_width=True)
-
-    # --- Volatility Chart (Full Width) ---
-    st.subheader("Oil Volatility Index (OVX)")
-    fig_ovx = px.line(
-        filtered_df,
-        x=filtered_df.index,
-        y="OVX",
-        labels={"OVX": "OVX (Volatility Index)"},
-        title="Oil Market Volatility (OVX)",
+            title="WTI & Brent Prices Over Time",
+        ),
+        use_container_width=True,
     )
-    st.plotly_chart(fig_ovx, use_container_width=True)
 
-    # --- Inventory Change Chart (Full Width) ---
-    st.subheader("Weekly Crude Oil Inventory Change")
-    fig_inventory = px.line(
-        filtered_df,
-        x=filtered_df.index,
-        y="Weekly Inventory Change",
-        labels={"Weekly Inventory Change": "Inventory Change (BBL)"},
-        title="Weekly Inventory Change Over Time",
+    st.plotly_chart(
+        px.line(
+            filtered_df,
+            x=filtered_df.index,
+            y="OVX",
+            labels={"OVX": "OVX (Volatility Index)"},
+            title="Oil Volatility Index (OVX) Over Time",
+        ),
+        use_container_width=True,
     )
-    st.plotly_chart(fig_inventory, use_container_width=True)
-
-    # --- Inventory vs WTI Price Change (Full Width) ---
-    st.subheader("Inventory Change vs WTI Weekly Price Change")
-    if "WTI Weekly Price Change" not in df.columns:
-        df["WTI Weekly Price Change"] = df["WTI"].pct_change(5) * 100
-    filtered_df = df.loc[date_range[0] : date_range[1]]
-
-    fig_scatter = px.scatter(
-        filtered_df,
-        x="Weekly Inventory Change",
-        y="WTI Weekly Price Change",
-        title="Inventory Change vs WTI Weekly Price Change",
-        labels={
-            "Weekly Inventory Change": "Weekly Inventory Change (BBL)",
-            "WTI Weekly Price Change": "WTI Weekly Price Change (%)",
-        },
-        trendline="ols",
-    )
-    st.plotly_chart(fig_scatter, use_container_width=True)
 
     st.markdown("---")
 
-    # --- Observations & Insights (Full Width) ---
+    # --- Inventory Chart ---
+    st.subheader("Weekly Crude Oil Inventory Change")
+    st.plotly_chart(
+        px.line(
+            filtered_df,
+            x=filtered_df.index,
+            y="Weekly Inventory Change",
+            labels={"Weekly Inventory Change": "Inventory Change (BBL)"},
+            title="Weekly Inventory Change Over Time",
+        ),
+        use_container_width=True,
+    )
+
+    # --- Inventory Change vs WTI Weekly Price Change (Scatter Plot) ---
+    if "WTI Weekly Price Change" not in df.columns:
+        df["WTI Weekly Price Change"] = df["WTI"].pct_change(5) * 100
+
+    filtered_df = df.loc[date_range[0] : date_range[1]]
+    st.subheader("Inventory Change vs WTI Weekly Price Change")
+    st.plotly_chart(
+        px.scatter(
+            filtered_df,
+            x="Weekly Inventory Change",
+            y="WTI Weekly Price Change",
+            title="Inventory Change vs WTI Weekly Price Change",
+            labels={
+                "Weekly Inventory Change": "Inventory Change (BBL)",
+                "WTI Weekly Price Change": "Weekly Price Change (%)",
+            },
+            trendline="ols",
+        ),
+        use_container_width=True,
+    )
+
+    st.markdown("---")
+
+    # --- Technical Indicators Section ---
+    st.subheader("Technical Indicators")
+
+    with st.expander("Show Technical Indicators (MA, Bollinger Bands, RSI, MACD)"):
+        # Moving Averages
+        st.write("### WTI Price with 50-Day & 200-Day Moving Averages")
+        st.plotly_chart(
+            px.line(
+                filtered_df,
+                x=filtered_df.index,
+                y=["WTI", "WTI_MA50", "WTI_MA200"],
+                labels={"value": "Price (USD)", "variable": "Indicator"},
+                title="WTI with Moving Averages",
+            ),
+            use_container_width=True,
+        )
+
+        # Bollinger Bands
+        st.write("### Bollinger Bands")
+        st.plotly_chart(
+            px.line(
+                filtered_df,
+                x=filtered_df.index,
+                y=["WTI", "WTI_BB_Upper", "WTI_BB_Lower", "WTI"],
+                labels={"value": "Price (USD)", "variable": "Indicator"},
+                title="WTI with Bollinger Bands",
+            ),
+            use_container_width=True,
+        )
+
+        # RSI
+        st.write("### Relative Strength Index (RSI)")
+        st.plotly_chart(
+            px.line(
+                filtered_df, x=filtered_df.index, y="WTI_RSI", title="WTI RSI (14-day)"
+            ),
+            use_container_width=True,
+        )
+
+        # MACD
+        st.write("### MACD Indicator")
+        st.plotly_chart(
+            px.line(
+                filtered_df,
+                x=filtered_df.index,
+                y=["WTI_MACD", "WTI_MACD_Signal"],
+                labels={"value": "Value", "variable": "Indicator"},
+                title="WTI MACD (12-26-9)",
+            ),
+            use_container_width=True,
+        )
+
+    st.markdown("---")
+
+    # --- Observations & Insights ---
     st.subheader("📝 Observations & Insights")
     st.markdown(
         """
-    ### Price Trends
-    - WTI and Brent prices started 2024 at approximately \\$70 and \\$75 per barrel.
-    - Prices rallied to \\$85-\\$90 per barrel by May, driven by strong demand recovery, OPEC+ discipline, and geopolitical tensions.
-    - Prices declined steadily into September, weighed by economic slowdown fears and rising US production.
-    - A brief rally in October highlighted market sensitivity to seasonal demand and geopolitical shifts.
-    - As of December, prices have reverted to around \\$70-\\$75 per barrel, indicating a broadly range-bound year.
+        ### Price Trends
+        - WTI and Brent prices fluctuated significantly due to macroeconomic and geopolitical factors.
+        - Inventory draws and builds influenced short-term pricing, but broader trends tied to global demand and OPEC actions.
 
-    ### Inventory Insights
-    - Early inventory draws in Q1 and Q2 supported rising prices.
-    - Inventory builds during summer coincided with declining prices, reflecting higher production and weaker refinery demand.
-    - Overall, inventory changes alone showed weak correlation with weekly price changes, emphasizing the importance of macroeconomic and geopolitical factors.
+        ### Inventory Insights
+        - Inventory builds tend to cap price rallies, especially when refinery throughput drops.
+        - Large inventory draws often coincide with rising OVX, indicating higher uncertainty.
 
-    ### Volatility Dynamics
-    - OVX declined from 40 to around 25 by mid-year, reflecting reduced uncertainty.
-    - Volatility spiked in September and October as prices rallied, driven by repositioning and renewed geopolitical risks.
-    - By year-end, OVX settled near 25-30, indicating a balanced market outlook with moderate event risk.
+        ### Volatility Dynamics
+        - OVX spikes are often linked to geopolitical risk events or sudden shifts in OPEC policy.
 
-    ### Key Takeaways
-    - Prices were range-bound in 2024 with supply/demand factors balanced.
-    - Inventory changes influenced short-term prices but were not the primary driver.
-    - Combining inventory data with volatility, macro indicators, and positioning data is essential for robust price modeling.
-    """
+        ### Technical Takeaways
+        - RSI over 70 often preceded pullbacks.
+        - MACD crossovers caught some trends but struggled during sideways periods.
+        """
     )
 
     st.markdown("---")
 
-    # --- Data Download Option ---
-    st.subheader("📥 Download Filtered Data")
-    csv = convert_df_to_csv(filtered_df)
+    # --- Data Download Options ---
+    st.subheader("📥 Download Data")
+
+    csv_filtered = convert_df_to_csv(filtered_df)
     st.download_button(
-        label="Download Filtered Data as CSV",
-        data=csv,
-        file_name="filtered_oil_data.csv",
-        mime="text/csv",
+        "Download Filtered Data as CSV",
+        csv_filtered,
+        "filtered_oil_data.csv",
+        "text/csv",
     )
 
-    # --- Data Preview (Full Width) ---
+    csv_full = convert_df_to_csv(df)
+    st.download_button(
+        "Download Full Data as CSV", csv_full, "full_oil_data.csv", "text/csv"
+    )
+
+    # --- Data Preview ---
     st.subheader("🔍 Preview Latest Data")
     st.dataframe(filtered_df.tail(10))
 
