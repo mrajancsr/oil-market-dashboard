@@ -47,6 +47,7 @@ def generate_features(
     oil_data["WTI Log Return"] = np.log(1 + oil_data["WTI"].pct_change())
     oil_data["Brent Log Return"] = np.log(1 + oil_data["Brent"].pct_change())
     oil_data["WTI-Brent Spread"] = oil_data["WTI"] - oil_data["Brent"]
+    oil_data["WTI Weekly Price Change"] = oil_data["WTI"].pct_change(5) * 100
 
     # weekly moving averages and volatility
     oil_data["WTI-7D MA"] = oil_data["WTI"].rolling(7).mean()

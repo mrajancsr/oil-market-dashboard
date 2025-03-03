@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 
@@ -66,71 +66,124 @@ def create_dashboard():
         max_value=df.index.max().date(),
         value=(df.index.min().date(), df.index.max().date()),
     )
-
     filtered_df = df.loc[date_range[0] : date_range[1]]
 
     st.markdown("---")
 
-    # --- Price and Volatility Charts (Full Width) ---
-    st.subheader("Price & Volatility Trends")
+    # --- Price and Moving Averages Chart ---
+    st.subheader("WTI & Brent Price Trends with Moving Averages")
 
-    st.plotly_chart(
-        px.line(
-            filtered_df,
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
             x=filtered_df.index,
-            y=["WTI", "Brent"],
-            labels={"value": "Price (USD)", "variable": "Oil Type"},
-            title="WTI & Brent Prices Over Time",
-        ),
-        use_container_width=True,
+            y=filtered_df["WTI"],
+            mode="lines",
+            name="WTI",
+            line=dict(color="blue"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=filtered_df.index,
+            y=filtered_df["Brent"],
+            mode="lines",
+            name="Brent",
+            line=dict(color="green"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=filtered_df.index,
+            y=filtered_df["WTI_MA50"],
+            mode="lines",
+            name="WTI 50-Day MA",
+            line=dict(color="red", dash="solid"),
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=filtered_df.index,
+            y=filtered_df["WTI_MA200"],
+            mode="lines",
+            name="WTI 200-Day MA",
+            line=dict(color="black", dash="dash"),
+        )
+    )
+    fig.update_layout(
+        title="WTI & Brent Prices with Moving Averages",
+        xaxis_title="Date",
+        yaxis_title="Price (USD)",
+        template="plotly_white",
     )
 
-    st.plotly_chart(
-        px.line(
-            filtered_df,
+    st.plotly_chart(fig, use_container_width=True)
+
+    # --- OVX Chart ---
+    st.subheader("Oil Volatility Index (OVX)")
+    fig_ovx = go.Figure()
+    fig_ovx.add_trace(
+        go.Scatter(
             x=filtered_df.index,
-            y="OVX",
-            labels={"OVX": "OVX (Volatility Index)"},
-            title="Oil Volatility Index (OVX) Over Time",
-        ),
-        use_container_width=True,
+            y=filtered_df["OVX"],
+            mode="lines",
+            name="OVX",
+            line=dict(color="purple"),
+        )
     )
+    fig_ovx.update_layout(
+        title="Oil Volatility Index (OVX)",
+        xaxis_title="Date",
+        yaxis_title="Volatility Index",
+        template="plotly_white",
+    )
+
+    st.plotly_chart(fig_ovx, use_container_width=True)
 
     st.markdown("---")
 
-    # --- Inventory Chart ---
+    # --- Inventory Change Chart ---
     st.subheader("Weekly Crude Oil Inventory Change")
-    st.plotly_chart(
-        px.line(
-            filtered_df,
+    fig_inv = go.Figure()
+    fig_inv.add_trace(
+        go.Scatter(
             x=filtered_df.index,
-            y="Weekly Inventory Change",
-            labels={"Weekly Inventory Change": "Inventory Change (BBL)"},
-            title="Weekly Inventory Change Over Time",
-        ),
-        use_container_width=True,
+            y=filtered_df["Weekly Inventory Change"],
+            mode="lines",
+            name="Weekly Inventory Change",
+            line=dict(color="teal"),
+        )
+    )
+    fig_inv.update_layout(
+        title="Weekly Inventory Change",
+        xaxis_title="Date",
+        yaxis_title="Change (BBL)",
+        template="plotly_white",
     )
 
-    # --- Inventory Change vs WTI Weekly Price Change (Scatter Plot) ---
-    if "WTI Weekly Price Change" not in df.columns:
-        df["WTI Weekly Price Change"] = df["WTI"].pct_change(5) * 100
+    st.plotly_chart(fig_inv, use_container_width=True)
 
-    filtered_df = df.loc[date_range[0] : date_range[1]]
+    # --- Inventory Change vs WTI Weekly Price Change Scatter Plot ---
     st.subheader("Inventory Change vs WTI Weekly Price Change")
-    st.plotly_chart(
-        px.scatter(
-            filtered_df,
-            x="Weekly Inventory Change",
-            y="WTI Weekly Price Change",
-            title="Inventory Change vs WTI Weekly Price Change",
-            labels={
-                "Weekly Inventory Change": "Inventory Change (BBL)",
-                "WTI Weekly Price Change": "Weekly Price Change (%)",
-            },
-            trendline="ols",
-        ),
-        use_container_width=True,
+
+    fig_scatter = go.Figure(
+        data=go.Scatter(
+            x=filtered_df["Weekly Inventory Change"],
+            y=filtered_df["WTI Weekly Price Change"],
+            mode="markers",
+            marker=dict(size=8, opacity=0.7),
+            name="Data Points",
+        )
     )
+
+    fig_scatter.update_layout(
+        title="Inventory Change vs WTI Weekly Price Change",
+        xaxis_title="Inventory Change (BBL)",
+        yaxis_title="Weekly Price Change (%)",
+        template="plotly_white",
+    )
+
+    st.plotly_chart(fig_scatter, use_container_width=True)
 
     st.markdown("---")
 
@@ -138,53 +191,81 @@ def create_dashboard():
     st.subheader("Technical Indicators")
 
     with st.expander("Show Technical Indicators (MA, Bollinger Bands, RSI, MACD)"):
-        # Moving Averages
-        st.write("### WTI Price with 50-Day & 200-Day Moving Averages")
-        st.plotly_chart(
-            px.line(
-                filtered_df,
-                x=filtered_df.index,
-                y=["WTI", "WTI_MA50", "WTI_MA200"],
-                labels={"value": "Price (USD)", "variable": "Indicator"},
-                title="WTI with Moving Averages",
-            ),
-            use_container_width=True,
-        )
-
         # Bollinger Bands
         st.write("### Bollinger Bands")
-        st.plotly_chart(
-            px.line(
-                filtered_df,
+        fig_bb = go.Figure()
+        fig_bb.add_trace(
+            go.Scatter(
                 x=filtered_df.index,
-                y=["WTI", "WTI_BB_Upper", "WTI_BB_Lower"],
-                labels={"value": "Price (USD)", "variable": "Indicator"},
-                title="WTI with Bollinger Bands",
-            ),
-            use_container_width=True,
+                y=filtered_df["WTI"],
+                mode="lines",
+                name="WTI",
+                line=dict(color="blue"),
+            )
         )
+        fig_bb.add_trace(
+            go.Scatter(
+                x=filtered_df.index,
+                y=filtered_df["WTI_BB_Upper"],
+                mode="lines",
+                name="Upper Band",
+                line=dict(color="gray"),
+            )
+        )
+        fig_bb.add_trace(
+            go.Scatter(
+                x=filtered_df.index,
+                y=filtered_df["WTI_BB_Lower"],
+                mode="lines",
+                name="Lower Band",
+                line=dict(color="gray"),
+            )
+        )
+        fig_bb.update_layout(title="WTI with Bollinger Bands", template="plotly_white")
+        st.plotly_chart(fig_bb, use_container_width=True)
 
         # RSI
         st.write("### Relative Strength Index (RSI)")
-        st.plotly_chart(
-            px.line(
-                filtered_df, x=filtered_df.index, y="WTI_RSI", title="WTI RSI (14-day)"
-            ),
-            use_container_width=True,
+        fig_rsi = go.Figure()
+        fig_rsi.add_trace(
+            go.Scatter(
+                x=filtered_df.index,
+                y=filtered_df["WTI_RSI"],
+                mode="lines",
+                name="RSI",
+                line=dict(color="orange"),
+            )
         )
+        fig_rsi.update_layout(
+            title="WTI RSI (14-day)",
+            yaxis=dict(range=[0, 100]),
+            template="plotly_white",
+        )
+        st.plotly_chart(fig_rsi, use_container_width=True)
 
         # MACD
         st.write("### MACD Indicator")
-        st.plotly_chart(
-            px.line(
-                filtered_df,
+        fig_macd = go.Figure()
+        fig_macd.add_trace(
+            go.Scatter(
                 x=filtered_df.index,
-                y=["WTI_MACD", "WTI_MACD_Signal"],
-                labels={"value": "Value", "variable": "Indicator"},
-                title="WTI MACD (12-26-9)",
-            ),
-            use_container_width=True,
+                y=filtered_df["WTI_MACD"],
+                mode="lines",
+                name="MACD",
+                line=dict(color="green"),
+            )
         )
+        fig_macd.add_trace(
+            go.Scatter(
+                x=filtered_df.index,
+                y=filtered_df["WTI_MACD_Signal"],
+                mode="lines",
+                name="Signal Line",
+                line=dict(color="red"),
+            )
+        )
+        fig_macd.update_layout(title="MACD & Signal Line", template="plotly_white")
+        st.plotly_chart(fig_macd, use_container_width=True)
 
     st.markdown("---")
 
