@@ -157,7 +157,7 @@ def create_dashboard():
             px.line(
                 filtered_df,
                 x=filtered_df.index,
-                y=["WTI", "WTI_BB_Upper", "WTI_BB_Lower", "WTI"],
+                y=["WTI", "WTI_BB_Upper", "WTI_BB_Lower"],
                 labels={"value": "Price (USD)", "variable": "Indicator"},
                 title="WTI with Bollinger Bands",
             ),
