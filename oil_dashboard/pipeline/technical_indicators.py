@@ -175,7 +175,9 @@ def calculate_macd(
     ).copy()
 
 
-def add_technical_indicators(df: pd.DataFrame, column: str = "WTI") -> pd.DataFrame:
+def add_technical_indicators(
+    df: pd.DataFrame, column: str = "WTI"
+) -> pd.DataFrame:
     """
     Add technical indicators to the oil price data.
 

@@ -28,7 +28,7 @@ def main():
     master_df.rename(columns={"index": "Date"}, inplace=True)
 
     print("Saving data to CSV...")
-    filename = f"data/oil_market_data.csv"
+    filename = "data/oil_market_data.csv"
     master_df.to_csv(filename, index=False)
 
     print(f"Pipeline completed successfully! Data saved to {filename}")

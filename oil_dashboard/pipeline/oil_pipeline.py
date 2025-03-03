@@ -4,8 +4,14 @@ from typing import Dict, List
 
 import pandas as pd
 
-from oil_dashboard.config.constants import BAKER_HUGES_US_RIG_COUNT_URL, EIA_URL
-from oil_dashboard.config.data_source_config import DataSourceConfig, DataSourceType
+from oil_dashboard.config.constants import (
+    BAKER_HUGES_US_RIG_COUNT_URL,
+    EIA_URL,
+)
+from oil_dashboard.config.data_source_config import (
+    DataSourceConfig,
+    DataSourceType,
+)
 from oil_dashboard.config.eia_config import EIA_CRUDE_INVENTORY_REQUEST_PARAMS
 from oil_dashboard.config.tickers import TICKERS
 from oil_dashboard.data_sources.base_source import DataSource
@@ -63,7 +69,9 @@ class OilPipeLine:
 
         data_frames = {}
         for config in configs:
-            data_source: DataSource = DataSourceFactory.create_data_source(config)
+            data_source: DataSource = DataSourceFactory.create_data_source(
+                config
+            )
             df = data_source.fetch()
             data_frames[config.source_type.name] = df
 

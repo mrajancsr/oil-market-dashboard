@@ -1,6 +1,5 @@
 import os
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -37,7 +36,9 @@ def create_dashboard():
     df = load_data()
 
     st.title("🛢️ Kempstar Crude Oil Fundamental Price Monitoring Dashboard")
-    st.caption("Data sourced from Yahoo Finance & EIA | Developed by Rajan Subramanian")
+    st.caption(
+        "Data sourced from Yahoo Finance & EIA | Developed by Rajan Subramanian"
+    )
 
     # --- Key Metrics Section ---
     st.header("Market Overview")
@@ -48,7 +49,8 @@ def create_dashboard():
     col3.metric("WTI-Brent Spread", f"{spread:+.2f}")
 
     col1.metric(
-        "Crude Inventory", format_large_number(df["Crude Oil Inventory"].iloc[-1])
+        "Crude Inventory",
+        format_large_number(df["Crude Oil Inventory"].iloc[-1]),
     )
     col2.metric(
         "Weekly Inventory Change",
@@ -190,7 +192,9 @@ def create_dashboard():
     # --- Technical Indicators Section ---
     st.subheader("Technical Indicators")
 
-    with st.expander("Show Technical Indicators (MA, Bollinger Bands, RSI, MACD)"):
+    with st.expander(
+        "Show Technical Indicators (MA, Bollinger Bands, RSI, MACD)"
+    ):
         # Bollinger Bands
         st.write("### Bollinger Bands")
         fig_bb = go.Figure()
@@ -221,7 +225,9 @@ def create_dashboard():
                 line=dict(color="gray"),
             )
         )
-        fig_bb.update_layout(title="WTI with Bollinger Bands", template="plotly_white")
+        fig_bb.update_layout(
+            title="WTI with Bollinger Bands", template="plotly_white"
+        )
         st.plotly_chart(fig_bb, use_container_width=True)
 
         # RSI
@@ -264,7 +270,9 @@ def create_dashboard():
                 line=dict(color="red"),
             )
         )
-        fig_macd.update_layout(title="MACD & Signal Line", template="plotly_white")
+        fig_macd.update_layout(
+            title="MACD & Signal Line", template="plotly_white"
+        )
         st.plotly_chart(fig_macd, use_container_width=True)
 
     st.markdown("---")

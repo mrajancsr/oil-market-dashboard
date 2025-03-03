@@ -3,7 +3,9 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-from oil_dashboard.pipeline.technical_indicators import add_technical_indicators
+from oil_dashboard.pipeline.technical_indicators import (
+    add_technical_indicators,
+)
 
 
 def generate_features(
@@ -17,7 +19,8 @@ def generate_features(
     Parameters
     ----------
     data_frames : Dict[str, pd.DataFrame]
-        Dictionary containing data from multiple sources (e.g., YAHOO_FINANCE, EIA, BAKER_HUGHES)
+        Dictionary containing data from multiple sources
+        (e.g., YAHOO_FINANCE, EIA, BAKER_HUGHES)
 
     Returns
     -------
@@ -32,7 +35,9 @@ def generate_features(
         if the oil price data or inventory data is empty
     """
     if "YAHOO_FINANCE" not in data_frames or "EIA" not in data_frames:
-        raise ValueError("Missing required data sources for feature engineering")
+        raise ValueError(
+            "Missing required data sources for feature engineering"
+        )
 
     oil_data = data_frames["YAHOO_FINANCE"]
     oil_inventory = data_frames["EIA"]
@@ -53,7 +58,9 @@ def generate_features(
     oil_data["WTI-7D MA"] = oil_data["WTI"].rolling(7).mean()
     oil_data["Brent-7D MA"] = oil_data["Brent"].rolling(7).mean()
     oil_data["OVX 7D MA"] = oil_data["OVX"].rolling(7).mean()
-    oil_data["WTI Rolling Volatility"] = oil_data["WTI Log Return"].rolling(7).std()
+    oil_data["WTI Rolling Volatility"] = (
+        oil_data["WTI Log Return"].rolling(7).std()
+    )
     oil_data["WTI Momentum"] = oil_data["WTI"].pct_change(5)
 
     # weekly inventory change and z-scores
