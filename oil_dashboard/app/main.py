@@ -35,10 +35,8 @@ def convert_df_to_csv(df):
 def create_dashboard():
     df = load_data()
 
-    st.title("🛢️ Kempstar Crude Oil Fundamental Price Monitoring Dashboard")
-    st.caption(
-        "Data sourced from Yahoo Finance & EIA | Developed by Rajan Subramanian"
-    )
+    st.title("🛢️ Crude Oil Fundamental Price Monitoring Dashboard")
+    st.caption("Data sourced from Yahoo Finance & EIA")
 
     # --- Key Metrics Section ---
     st.header("Market Overview")

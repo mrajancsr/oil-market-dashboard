@@ -14,7 +14,7 @@ def main():
         raise ValueError("EIA_API_KEY environment variable is required")
 
     pipeline = OilPipeLine(
-        start_date=date(2023, 1, 1), end_date=date.today(), api_key=api_key
+        start_date=date(2011, 1, 1), end_date=date.today(), api_key=api_key
     )
 
     os.makedirs("data", exist_ok=True)
