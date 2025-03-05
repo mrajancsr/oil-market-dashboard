@@ -105,7 +105,7 @@ def calculate_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
     """
     if len(prices) < window:
         raise ValueError(
-            f"Not enough data points ({len(prices)}) to calculate {window}-day RSI."
+            f"Not enough data points ({len(prices)}) to calculate {window}-day RSI."  # noqua
         )
     delta = prices.diff()
 

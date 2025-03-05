@@ -8,6 +8,40 @@ from oil_dashboard.pipeline.technical_indicators import (
 )
 
 
+def add_price_based_features(oil_data: pd.DataFrame) -> pd.DataFrame:
+    oil_data["WTI Log Return"] = np.log(1 + oil_data["WTI"].pct_change())
+    oil_data["Brent Log Return"] = np.log(1 + oil_data["Brent"].pct_change())
+    oil_data["WTI-Brent Spread"] = oil_data["WTI"] - oil_data["Brent"]
+    oil_data["WTI Weekly Price Change"] = oil_data["WTI"].pct_change(5) * 100
+
+    oil_data["WTI-7D MA"] = oil_data["WTI"].rolling(7).mean()
+    oil_data["Brent-7D MA"] = oil_data["Brent"].rolling(7).mean()
+    oil_data["OVX 7D MA"] = oil_data["OVX"].rolling(7).mean()
+    oil_data["WTI Rolling Volatility"] = (
+        oil_data["WTI Log Return"].rolling(7).std()
+    )
+    oil_data["WTI Momentum"] = oil_data["WTI"].pct_change(5)
+
+    return oil_data
+
+
+def add_inventory_based_features(inventory_df: pd.DataFrame) -> pd.DataFrame:
+    # weekly inventory change and z-scores
+    inventory_df["Weekly Inventory Change"] = inventory_df[
+        "Crude Oil Inventory"
+    ].diff()
+    inventory_df["Weekly Percent Change"] = inventory_df[
+        "Crude Oil Inventory"
+    ].pct_change()
+    inventory_daily = inventory_df.resample("D").ffill()
+    inventory_daily["Inventory Zscore"] = (
+        inventory_daily["Crude Oil Inventory"]
+        - inventory_daily["Crude Oil Inventory"].mean()
+    ) / inventory_daily["Crude Oil Inventory"].std()
+
+    return inventory_daily
+
+
 def generate_features(
     data_frames: Dict[str, pd.DataFrame],
 ) -> pd.DataFrame:
@@ -48,33 +82,9 @@ def generate_features(
     oil_data.index = pd.to_datetime(oil_data.index)
     oil_inventory.index = pd.to_datetime(oil_inventory.index)
 
-    # Price-based features
-    oil_data["WTI Log Return"] = np.log(1 + oil_data["WTI"].pct_change())
-    oil_data["Brent Log Return"] = np.log(1 + oil_data["Brent"].pct_change())
-    oil_data["WTI-Brent Spread"] = oil_data["WTI"] - oil_data["Brent"]
-    oil_data["WTI Weekly Price Change"] = oil_data["WTI"].pct_change(5) * 100
+    oil_data = add_price_based_features(oil_data)
 
-    # weekly moving averages and volatility
-    oil_data["WTI-7D MA"] = oil_data["WTI"].rolling(7).mean()
-    oil_data["Brent-7D MA"] = oil_data["Brent"].rolling(7).mean()
-    oil_data["OVX 7D MA"] = oil_data["OVX"].rolling(7).mean()
-    oil_data["WTI Rolling Volatility"] = (
-        oil_data["WTI Log Return"].rolling(7).std()
-    )
-    oil_data["WTI Momentum"] = oil_data["WTI"].pct_change(5)
-
-    # weekly inventory change and z-scores
-    oil_inventory["Weekly Inventory Change"] = oil_inventory[
-        "Crude Oil Inventory"
-    ].diff()
-    oil_inventory["Weekly Percent Change"] = oil_inventory[
-        "Crude Oil Inventory"
-    ].pct_change()
-    inventory_daily = oil_inventory.resample("D").ffill()
-    inventory_daily["Inventory Zscore"] = (
-        inventory_daily["Crude Oil Inventory"]
-        - inventory_daily["Crude Oil Inventory"].mean()
-    ) / inventory_daily["Crude Oil Inventory"].std()
+    inventory_daily = add_inventory_based_features(oil_inventory)
 
     # merge to master DataFrame
     master_df = oil_data.join(inventory_daily, how="outer").ffill()
