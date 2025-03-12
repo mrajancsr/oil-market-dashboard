@@ -11,6 +11,7 @@ from oil_dashboard.config.data_source_config import DataSourceType
 from oil_dashboard.pipeline.feature_engineering import generate_features
 from oil_dashboard.pipeline.oil_pipeline import OilPipeLine
 from oil_dashboard.utils.data_transformations import (
+    reshape_baker_hughes_to_db,
     reshape_inventory_data_for_db,
     reshape_price_data_for_db,
 )
@@ -53,6 +54,9 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             )
 
         if DataSourceType.BAKER_HUGHES.name in data_frames:
+            rig_count_df = reshape_baker_hughes_to_db(
+                data_frames[DataSourceType.BAKER_HUGHES.name]
+            )
             await handler.push(
                 "commodity.rig_count_data",
                 [
@@ -64,9 +68,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                     "weekly_change",
                     "yoy_change",
                 ],
-                data_frames[DataSourceType.BAKER_HUGHES.name].itertuples(
-                    index=False
-                ),
+                rig_count_df.itertuples(index=False),
             )
         # Generate Features **before** storing in PostgreSQL
         print("Generating Features...")

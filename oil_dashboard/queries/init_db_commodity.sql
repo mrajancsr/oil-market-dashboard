@@ -35,9 +35,6 @@ CREATE TABLE IF NOT EXISTS commodity.inventory_data (
     date DATE NOT NULL,
     product TEXT NOT NULL,
     inventory REAL,
-    weekly_change REAL,
-    percent_change REAL,
-    zscore REAL,
     PRIMARY KEY (date, product)
 );
 
@@ -77,5 +74,8 @@ CREATE TABLE IF NOT EXISTS commodity.features (
     symbol TEXT NOT NULL,
     feature_name TEXT NOT NULL,
     feature_value DOUBLE PRECISION NOT NULL,
+    weekly_change REAL,
+    percent_change REAL,
+    zscore REAL,
     PRIMARY KEY (date, symbol, feature_name)
 );

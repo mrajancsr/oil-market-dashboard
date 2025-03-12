@@ -9,6 +9,8 @@ Functions:
 
 import pandas as pd
 
+from oil_dashboard.config.constants import BAKER_HUGHES_COLUMNS_US
+
 
 def reshape_price_data_for_db(price_data: pd.DataFrame) -> pd.DataFrame:
     """Converts wide-format price data into a long format for PostgreSQL
@@ -111,3 +113,41 @@ def reshape_inventory_data_for_db(
     df = df[["date", "product", "inventory"]]
 
     return df
+
+
+def reshape_baker_hughes_to_db(rig_data: pd.DataFrame) -> pd.DataFrame:
+    """Formats raw Baker Hughes rig count data to match PostgreSQL schema.
+
+    Parameters
+    ----------
+    rig_data : pd.DataFrame
+        Raw Baker Hughes rig count data.
+
+    Returns
+    -------
+    pd.DataFrame
+        Cleaned and structured DataFrame ready for database insertion.
+    """
+    if rig_data.empty:
+        raise ValueError("Received empty rig count data")
+
+    # ✅ Extract the first row (U.S. data) and format as DataFrame
+    us_rig_data = rig_data.iloc[0]
+
+    data = {
+        "date": pd.to_datetime(
+            us_rig_data[BAKER_HUGHES_COLUMNS_US["date"]], format="%d %b %Y"
+        ),
+        "total_rigs": int(us_rig_data[BAKER_HUGHES_COLUMNS_US["count"]]),
+        "weekly_change": int(
+            us_rig_data[BAKER_HUGHES_COLUMNS_US["weekly_change"]]
+        ),
+        "yoy_change": int(
+            us_rig_data[BAKER_HUGHES_COLUMNS_US["yearly_change"]]
+        ),
+        "oil_rigs": None,  # place holder until better data is found
+        "gas_rigs": None,
+        "misc_rigs": None,
+    }
+
+    return pd.DataFrame([data])

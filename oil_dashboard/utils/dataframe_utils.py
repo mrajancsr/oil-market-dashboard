@@ -1,3 +1,5 @@
+"""The purpose of this file is to perform validation, checking, fixing"""
+
 import pandas as pd
 
 
