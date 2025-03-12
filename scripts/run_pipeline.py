@@ -3,8 +3,8 @@ from datetime import date
 from typing import Dict
 
 import pandas as pd
+from neptunedb import AsyncDBHandler
 from neptunedb.db_config import DBConfig
-from neptunedb.dbreader import AsyncDBReader
 
 from oil_dashboard.config.data_source_config import DataSourceType
 from oil_dashboard.pipeline.feature_engineering import generate_features
@@ -39,13 +39,15 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
     """
     config = DBConfig.from_env()
 
-    async with AsyncDBReader(config) as reader:
+    async with AsyncDBHandler(config) as reader:
         if DataSourceType.YAHOO_FINANCE.name in data_frames:
             yahoo_df = reshape_for_db(
                 data_frames[DataSourceType.YAHOO_FINANCE.name]
             )
             await reader.push(
-                yahoo_df.itertuples(index=False), "commodity.price_data"
+                "commodity.price_data",
+                yahoo_df.columns,
+                yahoo_df.itertuples(index=False),
             )
 
         # Save inventory data (EIA)

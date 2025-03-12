@@ -55,7 +55,7 @@ async def main():
     async with AsyncDBReader(config) as reader:
         if await schema_exists(reader, schema_name):
             print(
-                f"Schema {schema_name} already exists.  Skipping initialization"
+                f"Schema {schema_name} already exists.  Skipping initialization"  # noqa
             )
         else:
             print(f"Schema {schema_name} not found.  Running init_db sql")
