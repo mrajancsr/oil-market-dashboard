@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS commodity.technical_indicators (
 );
 
 -- Inventory Data Table (EIA Crude, Gasoline, Distillate Inventories)
-CREATE TABLE IF NOT EXISTS commodity.inventory_date (
+CREATE TABLE IF NOT EXISTS commodity.inventory_data (
     date DATE NOT NULL,
     product TEXT NOT NULL,
     inventory REAL,

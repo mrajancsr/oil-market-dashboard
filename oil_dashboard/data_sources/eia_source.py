@@ -1,12 +1,12 @@
-import os
 from dataclasses import dataclass
-from datetime import date
 
 import pandas as pd
 import requests
 
-from oil_dashboard.config.constants import EIA_URL
-from oil_dashboard.config.data_source_config import DataSourceConfig, DataSourceType
+from oil_dashboard.config.data_source_config import (
+    DataSourceConfig,
+    DataSourceType,
+)
 from oil_dashboard.data_sources.base_source import DataSource
 
 
@@ -32,7 +32,7 @@ class EIASource(DataSource):
         response = requests.get(self.config.base_url, params=params)
         if response.status_code != 200:
             raise Exception(
-                f"Failed to fetch data: {response.status_code}, {response.text}"
+                f"Failed to fetch data: {response.status_code}, {response.text}"  # noqa
             )
 
         data = response.json()
@@ -46,12 +46,20 @@ class EIASource(DataSource):
             raise Exception("No inventory data returned.")
 
         inventory_data = pd.DataFrame.from_records(records)
+
+        # Ensure 'period' is datetime and set as index
         inventory_data["period"] = pd.to_datetime(inventory_data["period"])
         inventory_data.set_index("period", inplace=True)
 
-        # Clean up columns
+        # Keep only the relevant column, rename it, and ensure data type
         inventory_data = inventory_data[["value"]]
-        inventory_data["value"] = inventory_data["value"].astype(int)
-        inventory_data.rename(columns={"value": "Crude Oil Inventory"}, inplace=True)
+        inventory_data.rename(
+            columns={"value": "Crude Oil Inventory"}, inplace=True
+        )
+        inventory_data["Crude Oil Inventory"] = inventory_data[
+            "Crude Oil Inventory"
+        ].astype(int)
+
+        inventory_data.dropna(inplace=True)
 
         return inventory_data

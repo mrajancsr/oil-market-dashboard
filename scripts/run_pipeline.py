@@ -69,7 +69,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             )
             await handler.push(
                 "commodity.price_data",
-                ["Date", "Ticker", "Open", "High", "Low", "Close", "Volume"],
+                ["date", "symbol", "open", "high", "low", "close", "volume"],
                 yahoo_df.itertuples(index=False),
             )
 
@@ -81,9 +81,6 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                     "date",
                     "product",
                     "inventory",
-                    "weekly_change",
-                    "percent_change",
-                    "zscore",
                 ],
                 data_frames[DataSourceType.EIA.name].itertuples(index=False),
             )
