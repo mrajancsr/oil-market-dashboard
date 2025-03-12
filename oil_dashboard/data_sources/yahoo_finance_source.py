@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from datetime import date
-from typing import List
 
 import pandas as pd
 import yfinance as yf
 
-from oil_dashboard.config.data_source_config import DataSourceConfig, DataSourceType
+from oil_dashboard.config.data_source_config import (
+    DataSourceConfig,
+    DataSourceType,
+)
 from oil_dashboard.data_sources.base_source import DataSource
 
 
@@ -19,7 +20,9 @@ class YahooFinanceSource(DataSource):
 
     def fetch(self) -> pd.DataFrame:
         if not self.config.tickers:
-            raise ValueError("Tickers must be provided for YahooFinanceDataSource")
+            raise ValueError(
+                "Tickers must be provided for YahooFinanceDataSource"
+            )  # noqa
 
         start = self.config.start_date.strftime("%Y-%m-%d")
         end = self.config.end_date.strftime("%Y-%m-%d")
@@ -34,8 +37,13 @@ class YahooFinanceSource(DataSource):
             start=start,
             end=end,
             progress=True,
-        )["Close"]
+        )
 
         oil_data.rename(columns=ticker_map, inplace=True)
         oil_data.index.name = "Date"
+
+        # Flatten multiindex to get clean column names
+        oil_data.columns = [
+            "_".join(col).strip() for col in oil_data.columns.values
+        ]
         return oil_data
