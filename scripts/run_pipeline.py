@@ -12,16 +12,16 @@ from oil_dashboard.pipeline.oil_pipeline import OilPipeLine
 
 
 def reshape_for_db(df):
-    """Converts the wide-format DataFrame into a long format suitable for PostgreSQL."""
+    """Converts the wide-format DataFrame into a long format suitable for PostgreSQL."""  # noqa
     df = df.reset_index()  # Ensure Date is a column
 
-    # ✅ Melt DataFrame into long format (Date, Ticker, Column, Value)
+    # Melt DataFrame into long format (Date, Ticker, Column, Value)
     df_long = df.melt(id_vars=["Date"], var_name="Column", value_name="Value")
 
-    # ✅ Extract Ticker and OHLCV type from column names
+    # Extract Ticker and OHLCV type from column names
     df_long[["Type", "Ticker"]] = df_long["Column"].str.split("_", expand=True)
 
-    # ✅ Pivot table to get correct structure: (Date, Ticker, Open, High, Low, Close, Volume)
+    # Pivot table to get correct structure: (Date, Ticker, OHLCV)
     df_final = df_long.pivot(
         index=["Date", "Ticker"], columns="Type", values="Value"
     ).reset_index()
@@ -47,7 +47,8 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             await reader.push(
                 yahoo_df.itertuples(index=False), "commodity.price_data"
             )
-        # ✅ Save inventory data (EIA)
+
+        # Save inventory data (EIA)
         if DataSourceType.EIA.name in data_frames:
             await reader.push(
                 data_frames[DataSourceType.EIA.name].itertuples(index=False),
