@@ -3,11 +3,11 @@
 import asyncio
 
 import aiofiles
-from neptunedb import AsyncDBReader
+from neptunedb import AsyncDBHandler
 from neptunedb.db_config import DBConfig
 
 
-async def schema_exists(db_reader: AsyncDBReader, schema_name: str) -> bool:
+async def schema_exists(db_reader: AsyncDBHandler, schema_name: str) -> bool:
     """Checks if schema exists in PostGreSQL database
 
     Parameters
@@ -52,7 +52,7 @@ async def main():
     schema_name = "commodity"
     file_path: str = "./oil_dashboard/queries/init_db_commodity.sql"
 
-    async with AsyncDBReader(config) as reader:
+    async with AsyncDBHandler(config) as reader:
         if await schema_exists(reader, schema_name):
             print(
                 f"Schema {schema_name} already exists.  Skipping initialization"  # noqa

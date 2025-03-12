@@ -70,3 +70,12 @@ CREATE TABLE IF NOT EXISTS commodity.factors (
     macro_pressure REAL,
     PRIMARY KEY (date, symbol)
 );
+
+-- Features Table
+CREATE TABLE IF NOT EXISTS commodity.features (
+    date DATE NOT NULL,
+    symbol TEXT NOT NULL,
+    feature_name TEXT NOT NULL,
+    feature_value DOUBLE PRECISION NOT NULL,
+    PRIMARY KEY (date, symbol, feature_name)
+);

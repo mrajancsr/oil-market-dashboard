@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import date
 from typing import Dict
@@ -26,6 +27,28 @@ def reshape_for_db(df):
         index=["Date", "Ticker"], columns="Type", values="Value"
     ).reset_index()
 
+    # Rename columns to match PostgreSQL schema
+    df_final.rename(columns={"Ticker": "symbol", "Date": "date"}, inplace=True)
+
+    # Ensure all column names are lowercase
+    df_final.columns = df_final.columns.str.lower()
+
+    # Reorder columns to match PostgreSQL schema
+    df_final = df_final[
+        ["date", "symbol", "open", "high", "low", "close", "volume"]
+    ]
+
+    # Drop rows where **all columns except date & symbol are NaN**
+    df_final.dropna(
+        subset=["open", "high", "low", "close", "volume"],
+        how="all",
+        inplace=True,
+    )
+
+    # Convert `volume` to `int` **only if all values are whole numbers**
+    if (df_final["volume"] % 1 == 0).all():
+        df_final["volume"] = df_final["volume"].astype(int)
+
     return df_final
 
 
@@ -39,31 +62,67 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
     """
     config = DBConfig.from_env()
 
-    async with AsyncDBHandler(config) as reader:
+    async with AsyncDBHandler(config) as handler:
         if DataSourceType.YAHOO_FINANCE.name in data_frames:
             yahoo_df = reshape_for_db(
                 data_frames[DataSourceType.YAHOO_FINANCE.name]
             )
-            await reader.push(
+            await handler.push(
                 "commodity.price_data",
-                yahoo_df.columns,
+                ["Date", "Ticker", "Open", "High", "Low", "Close", "Volume"],
                 yahoo_df.itertuples(index=False),
             )
 
         # Save inventory data (EIA)
         if DataSourceType.EIA.name in data_frames:
-            await reader.push(
-                data_frames[DataSourceType.EIA.name].itertuples(index=False),
+            await handler.push(
                 "commodity.inventory_data",
+                [
+                    "date",
+                    "product",
+                    "inventory",
+                    "weekly_change",
+                    "percent_change",
+                    "zscore",
+                ],
+                data_frames[DataSourceType.EIA.name].itertuples(index=False),
             )
 
         if DataSourceType.BAKER_HUGHES.name in data_frames:
-            await reader.push(
+            await handler.push(
                 "commodity.rig_count_data",
+                [
+                    "date",
+                    "total_rigs",
+                    "oil_rigs",
+                    "gas_rigs",
+                    "misc_rigs",
+                    "weekly_change",
+                    "yoy_change",
+                ],
                 data_frames[DataSourceType.BAKER_HUGHES.name].itertuples(
                     index=False
                 ),
             )
+        # Generate Features **before** storing in PostgreSQL
+        print("Generating Features...")
+        features_df = generate_features(data_frames)
+        features_df.reset_index(inplace=True)
+        features_df.rename(columns={"index": "Date"}, inplace=True)
+
+        # Reshape for database storage (long format)
+        features_long = features_df.melt(
+            id_vars=["Date", "symbol"],
+            var_name="feature_name",
+            value_name="feature_value",
+        )
+
+        # Store computed features in PostgreSQL
+        await handler.push(
+            "commodity.features",
+            ["Date", "symbol", "feature_name", "feature_value"],
+            features_long.itertuples(index=False),
+        )
 
 
 def main():
@@ -80,16 +139,8 @@ def main():
     print("Fetching data sources...")
     data_frames: Dict[str, pd.DataFrame] = pipeline.fetch_all_data()
 
-    print("Generating Features...")
-    master_df = generate_features(data_frames)
-    master_df.reset_index(inplace=True)
-    master_df.rename(columns={"index": "Date"}, inplace=True)
-
-    print("Saving data to CSV...")
-    filename = "data/oil_market_data.csv"
-    master_df.to_csv(filename, index=False)
-
-    print(f"Pipeline completed successfully! Data saved to {filename}")
+    print("Saving to PostGreSQL Database")
+    asyncio.run(save_to_db(data_frames))
 
 
 if __name__ == "__main__":
