@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from datetime import date
 from typing import Dict
@@ -16,6 +17,12 @@ from oil_dashboard.utils.data_transformations import (
     reshape_price_data_for_db,
 )
 
+logging.basicConfig(
+    level=logging.INFO,  # ✅ Change to DEBUG for more details
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 
 async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
     """Saves the dataframe to postgresql
@@ -28,37 +35,57 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
     config = DBConfig.from_env()
 
     async with AsyncDBHandler(config) as handler:
+        # Reshape and Insert Price Data First
         if DataSourceType.YAHOO_FINANCE.name in data_frames:
-            yahoo_df = reshape_price_data_for_db(
-                data_frames[DataSourceType.YAHOO_FINANCE.name]
-            )
-            await handler.push(
-                "commodity.price_data",
-                ["date", "symbol", "open", "high", "low", "close", "volume"],
-                yahoo_df.itertuples(index=False),
+            data_frames[DataSourceType.YAHOO_FINANCE.name] = (
+                reshape_price_data_for_db(
+                    data_frames[DataSourceType.YAHOO_FINANCE.name]
+                )
             )
 
-        # Save inventory data (EIA)
+            await handler.push(
+                "price_data",
+                "commodity",
+                ["date", "symbol", "open", "high", "low", "close", "volume"],
+                data_frames[DataSourceType.YAHOO_FINANCE.name].itertuples(
+                    index=False
+                ),
+            )
+            logger.info(
+                f"Inserted {len(data_frames[DataSourceType.YAHOO_FINANCE.name])} rows into commodity.price_data"
+            )
+
+        # Reshape & Insert Inventory Data
         if DataSourceType.EIA.name in data_frames:
-            eia_df = reshape_inventory_data_for_db(
-                data_frames[DataSourceType.EIA.name]
+            data_frames[DataSourceType.EIA.name] = (
+                reshape_inventory_data_for_db(
+                    data_frames[DataSourceType.EIA.name]
+                )
             )
             await handler.push(
-                "commodity.inventory_data",
+                "inventory_data",
+                "commodity",
                 [
                     "date",
                     "product",
                     "inventory",
                 ],
-                eia_df.itertuples(index=False),
+                data_frames[DataSourceType.EIA.name].itertuples(index=False),
+            )
+            logger.info(
+                f"Inserted {len(data_frames[DataSourceType.EIA.name])} rows into commodity.inventory_data"
             )
 
+        # Reshape & Insert Rig Count Data (Baker Hughes)
         if DataSourceType.BAKER_HUGHES.name in data_frames:
-            rig_count_df = reshape_baker_hughes_to_db(
-                data_frames[DataSourceType.BAKER_HUGHES.name]
+            data_frames[DataSourceType.BAKER_HUGHES.name] = (
+                reshape_baker_hughes_to_db(
+                    data_frames[DataSourceType.BAKER_HUGHES.name]
+                )
             )
             await handler.push(
-                "commodity.rig_count_data",
+                "rig_count_data",
+                "commodity",
                 [
                     "date",
                     "total_rigs",
@@ -68,26 +95,70 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                     "weekly_change",
                     "yoy_change",
                 ],
-                rig_count_df.itertuples(index=False),
+                data_frames[DataSourceType.BAKER_HUGHES.name].itertuples(
+                    index=False
+                ),
             )
+            logger.info(
+                f"Inserted {len(data_frames[DataSourceType.BAKER_HUGHES.name])} rows into commodity.rig_count_data"
+            )
+
         # Generate Features **before** storing in PostgreSQL
         print("Generating Features...")
-        features_df = generate_features(data_frames)
-        features_df.reset_index(inplace=True)
-        features_df.rename(columns={"index": "Date"}, inplace=True)
+        features_df = generate_features(data_frames).reset_index()
+        features_df.rename(columns={"index": "date"}, inplace=True)
 
-        # Reshape for database storage (long format)
+        # Extract Technical Indicators (MA, Bollinger, RSI, MACD)
+        technical_indicator_columns = [
+            "ma50",
+            "ma200",
+            "bb_upper",
+            "bb_lower",
+            "rsi",
+            "macd",
+            "macd_signal",
+        ]
+        technical_indicators_df = features_df[
+            ["date", "symbol"]
+            + [
+                col
+                for col in technical_indicator_columns
+                if col in features_df.columns
+            ]
+        ].fillna(0)
+
+        # Extract Features (WTI Log Return, Spread, etc.) (long format)
+        feature_columns = list(
+            set(features_df.columns)
+            - set(["open", "high", "low", "close", "volume"])
+        )
         features_long = features_df.melt(
-            id_vars=["Date", "symbol"],
+            id_vars=["date", "symbol"],
+            value_vars=feature_columns,
             var_name="feature_name",
             value_name="feature_value",
         )
 
+        # Store Indicators
+        await handler.push(
+            "technical_indicators",
+            "commodity",
+            ["date", "symbol"] + technical_indicator_columns,
+            technical_indicators_df.itertuples(index=False),
+        )
+        logger.info(
+            f"Inserted {len(technical_indicators_df)} rows into commodity.technical_indicators"
+        )
+
         # Store computed features in PostgreSQL
         await handler.push(
-            "commodity.features",
-            ["Date", "symbol", "feature_name", "feature_value"],
+            "features",
+            "commodity",
+            ["date", "symbol", "feature_name", "feature_value"],
             features_long.itertuples(index=False),
+        )
+        logger.info(
+            f"Inserted {len(features_long)} rows into commodity.features"
         )
 
 
