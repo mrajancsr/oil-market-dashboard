@@ -10,46 +10,10 @@ from neptunedb.db_config import DBConfig
 from oil_dashboard.config.data_source_config import DataSourceType
 from oil_dashboard.pipeline.feature_engineering import generate_features
 from oil_dashboard.pipeline.oil_pipeline import OilPipeLine
-
-
-def reshape_for_db(df):
-    """Converts the wide-format DataFrame into a long format suitable for PostgreSQL."""  # noqa
-    df = df.reset_index()  # Ensure Date is a column
-
-    # Melt DataFrame into long format (Date, Ticker, Column, Value)
-    df_long = df.melt(id_vars=["Date"], var_name="Column", value_name="Value")
-
-    # Extract Ticker and OHLCV type from column names
-    df_long[["Type", "Ticker"]] = df_long["Column"].str.split("_", expand=True)
-
-    # Pivot table to get correct structure: (Date, Ticker, OHLCV)
-    df_final = df_long.pivot(
-        index=["Date", "Ticker"], columns="Type", values="Value"
-    ).reset_index()
-
-    # Rename columns to match PostgreSQL schema
-    df_final.rename(columns={"Ticker": "symbol", "Date": "date"}, inplace=True)
-
-    # Ensure all column names are lowercase
-    df_final.columns = df_final.columns.str.lower()
-
-    # Reorder columns to match PostgreSQL schema
-    df_final = df_final[
-        ["date", "symbol", "open", "high", "low", "close", "volume"]
-    ]
-
-    # Drop rows where **all columns except date & symbol are NaN**
-    df_final.dropna(
-        subset=["open", "high", "low", "close", "volume"],
-        how="all",
-        inplace=True,
-    )
-
-    # Convert `volume` to `int` **only if all values are whole numbers**
-    if (df_final["volume"] % 1 == 0).all():
-        df_final["volume"] = df_final["volume"].astype(int)
-
-    return df_final
+from oil_dashboard.utils.data_transformations import (
+    reshape_inventory_data_for_db,
+    reshape_price_data_for_db,
+)
 
 
 async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
@@ -64,7 +28,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
     async with AsyncDBHandler(config) as handler:
         if DataSourceType.YAHOO_FINANCE.name in data_frames:
-            yahoo_df = reshape_for_db(
+            yahoo_df = reshape_price_data_for_db(
                 data_frames[DataSourceType.YAHOO_FINANCE.name]
             )
             await handler.push(
@@ -75,6 +39,9 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
         # Save inventory data (EIA)
         if DataSourceType.EIA.name in data_frames:
+            eia_df = reshape_inventory_data_for_db(
+                data_frames[DataSourceType.EIA.name]
+            )
             await handler.push(
                 "commodity.inventory_data",
                 [
@@ -82,7 +49,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                     "product",
                     "inventory",
                 ],
-                data_frames[DataSourceType.EIA.name].itertuples(index=False),
+                eia_df.itertuples(index=False),
             )
 
         if DataSourceType.BAKER_HUGHES.name in data_frames:
