@@ -79,8 +79,8 @@ def generate_features(
             "Missing required data sources for feature engineering"
         )
 
-    oil_data = data_frames["YAHOO_FINANCE"]
-    oil_inventory = data_frames["EIA"]
+    oil_data = data_frames["YAHOO_FINANCE"].copy()
+    oil_inventory = data_frames["EIA"].copy()
 
     if oil_data.empty or oil_inventory.empty:
         raise ValueError("Data Not Available for feature engineering")
@@ -105,9 +105,12 @@ def generate_features(
     # merge to master DataFrame
     master_df = oil_data.join(inventory_daily, how="outer").ffill()
 
-    master_df.rename(columns=rename_map, inplace=True)
-
     # Add technical indicators via helper function
-    master_df = add_technical_indicators(master_df)
+    master_df = add_technical_indicators(master_df, columns=["WTI", "Brent"])
+
+    # Restore columns back to their original names
+    reverse_map = {value: key for key, value in rename_map.items()}
+
+    master_df.rename(columns=reverse_map, inplace=True)
 
     return master_df

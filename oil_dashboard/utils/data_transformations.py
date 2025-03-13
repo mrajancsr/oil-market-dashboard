@@ -7,6 +7,7 @@ Functions:
                                  to match the database schema.
 """
 
+import numpy as np
 import pandas as pd
 
 from oil_dashboard.config.constants import BAKER_HUGHES_COLUMNS_US
@@ -151,3 +152,81 @@ def reshape_baker_hughes_to_db(rig_data: pd.DataFrame) -> pd.DataFrame:
     }
 
     return pd.DataFrame([data])
+
+
+def prepare_technical_indicators_for_db(
+    features_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """_summary_
+
+    Parameters
+    ----------
+    features_df : pd.DataFrame
+        _description_
+
+    Returns
+    -------
+    pd.DataFrame
+        _description_
+    """
+    # Extract Technical Indicators (MA, Bollinger, RSI, MACD)
+    technical_indicator_columns = [
+        "MA50",
+        "MA200",
+        "BB_Upper",
+        "BB_Lower",
+        "RSI",
+        "MACD",
+        "MACD_Signal",
+    ]
+
+    # Dynamically extract WTI & Brent versions of each indicator
+    technical_indicators_df = features_df[
+        ["date"]
+        + [
+            f"WTI_{col}"
+            for col in technical_indicator_columns
+            if f"WTI_{col}" in features_df.columns
+        ]
+        + [
+            f"Brent_{col}"
+            for col in technical_indicator_columns
+            if f"Brent_{col}" in features_df.columns
+        ]
+    ].fillna(0)
+
+    # Convert technical indicators to long format
+    technical_indicators_long = pd.melt(
+        technical_indicators_df,
+        id_vars=["date"],  # Keep `date`
+        value_vars=[
+            col for col in technical_indicators_df.columns if col != "date"
+        ],  # Select all indicator columns
+        var_name="symbol_feature",
+        value_name="value",
+    )
+
+    # Extract `symbol` and `indicator_name` separately
+    technical_indicators_long[["symbol", "indicator_name"]] = (
+        technical_indicators_long["symbol_feature"].str.split(
+            "_", n=1, expand=True
+        )
+    )
+
+    # Pivot to wide format matching database schema
+    technical_indicators_wide = technical_indicators_long.pivot(
+        index=["date", "symbol"], columns="indicator_name", values="value"
+    ).reset_index()
+
+    # Ensure column names match SQL schema
+    technical_indicators_wide.columns = [
+        "date",
+        "symbol",
+    ] + technical_indicator_columns
+
+    # Fill missing values with NULL (SQL default behavior)
+    technical_indicators_wide = technical_indicators_wide.fillna(
+        np.nan
+    ).replace([np.nan], [None])
+
+    return technical_indicators_wide

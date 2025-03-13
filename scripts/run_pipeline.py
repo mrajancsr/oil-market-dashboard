@@ -12,6 +12,7 @@ from oil_dashboard.config.data_source_config import DataSourceType
 from oil_dashboard.pipeline.feature_engineering import generate_features
 from oil_dashboard.pipeline.oil_pipeline import OilPipeLine
 from oil_dashboard.utils.data_transformations import (
+    prepare_technical_indicators_for_db,
     reshape_baker_hughes_to_db,
     reshape_inventory_data_for_db,
     reshape_price_data_for_db,
@@ -41,45 +42,69 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         features_df.rename(columns={"index": "date"}, inplace=True)
 
         # Extract Technical Indicators (MA, Bollinger, RSI, MACD)
-        technical_indicator_columns = [
-            "ma50",
-            "ma200",
-            "bb_upper",
-            "bb_lower",
-            "rsi",
-            "macd",
-            "macd_signal",
-        ]
-        technical_indicators_df = features_df[
-            ["date", "symbol"]
-            + [
-                col
-                for col in technical_indicator_columns
-                if col in features_df.columns
-            ]
-        ].fillna(0)
-
-        # Extract Features (WTI Log Return, Spread, etc.) (long format)
-        feature_columns = list(
-            set(features_df.columns)
-            - set(["open", "high", "low", "close", "volume"])
-        )
-        features_long = features_df.melt(
-            id_vars=["date", "symbol"],
-            value_vars=feature_columns,
-            var_name="feature_name",
-            value_name="feature_value",
+        technical_indicators_df = prepare_technical_indicators_for_db(
+            features_df
         )
 
         # Store Indicators
         await handler.push(
             "technical_indicators",
             "commodity",
-            ["date", "symbol"] + technical_indicator_columns,
+            technical_indicators_df.columns,
             technical_indicators_df.itertuples(index=False),
         )
         logger.info(
             f"Inserted {len(technical_indicators_df)} rows into commodity.technical_indicators"
+        )
+
+        # Extract Features (WTI Log Return, Spread, etc.) (long format)
+        feature_columns = list(
+            set(features_df.columns)
+            - set(data_frames["YAHOO_FINANCE"].columns)
+        )
+
+        # Define inventory-based features separately (since they don’t have symbols)
+        inventory_features = {
+            "Weekly Inventory Change",
+            "Weekly Percent Change",
+            "Inventory Zscore",
+            "Crude Oil Inventory",
+        }
+
+        # Extract technical indicators & price-based features in long format
+        features_long = features_df.melt(
+            id_vars=["date"],
+            value_vars=[
+                col for col in feature_columns if col not in inventory_features
+            ],
+            var_name="symbol_feature",
+            value_name="feature_value",
+        )
+
+        # Extract symbol name (e.g., WTI, Brent) and feature name dynamically for non-inventory features
+        features_long[["symbol", "feature_name"]] = features_long[
+            "symbol_feature"
+        ].str.split("_", n=1, expand=True)
+
+        # rearrange the columns in features table
+        features_long = features_long[
+            ["date", "symbol", "feature_name", "feature_value"]
+        ]
+
+        # Extract inventory features separately & assign `"INVENTORY"` as the symbol
+        inventory_long = features_df.melt(
+            id_vars=["date"],
+            value_vars=list(inventory_features),
+            var_name="feature_name",
+            value_name="feature_value",
+        )
+
+        # Assign `"INVENTORY"` as the symbol
+        inventory_long["symbol"] = "INVENTORY"
+
+        # Merge both DataFrames to ensure all features are included
+        features_long = pd.concat(
+            [features_long, inventory_long], ignore_index=True
         )
 
         # Store computed features in PostgreSQL
