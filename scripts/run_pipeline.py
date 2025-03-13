@@ -12,6 +12,7 @@ from oil_dashboard.config.data_source_config import DataSourceType
 from oil_dashboard.pipeline.feature_engineering import generate_features
 from oil_dashboard.pipeline.oil_pipeline import OilPipeLine
 from oil_dashboard.utils.data_transformations import (
+    prepare_features_for_db,
     prepare_technical_indicators_for_db,
     reshape_baker_hughes_to_db,
     reshape_inventory_data_for_db,
@@ -57,55 +58,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             f"Inserted {len(technical_indicators_df)} rows into commodity.technical_indicators"  # noqa
         )
 
-        # Extract Features (WTI Log Return, Spread, etc.) (long format)
-        feature_columns = list(
-            set(features_df.columns)
-            - set(data_frames["YAHOO_FINANCE"].columns)
-        )
-
-        # Define inventory-based features separately (since they don’t have symbols)
-        inventory_features = {
-            "Weekly Inventory Change",
-            "Weekly Percent Change",
-            "Inventory Zscore",
-            "Crude Oil Inventory",
-        }
-
-        # Extract technical indicators & price-based features in long format
-        features_long = features_df.melt(
-            id_vars=["date"],
-            value_vars=[
-                col for col in feature_columns if col not in inventory_features
-            ],
-            var_name="symbol_feature",
-            value_name="feature_value",
-        )
-
-        # Extract symbol name (e.g., WTI, Brent) and feature name dynamically for non-inventory features
-        features_long[["symbol", "feature_name"]] = features_long[
-            "symbol_feature"
-        ].str.split("_", n=1, expand=True)
-
-        # rearrange the columns in features table
-        features_long = features_long[
-            ["date", "symbol", "feature_name", "feature_value"]
-        ]
-
-        # Extract inventory features separately
-        inventory_long = features_df.melt(
-            id_vars=["date"],
-            value_vars=list(inventory_features),
-            var_name="feature_name",
-            value_name="feature_value",
-        )
-
-        # Assign `"INVENTORY"` as the symbol
-        inventory_long["symbol"] = "INVENTORY"
-
-        # Merge both DataFrames to ensure all features are included
-        features_long = pd.concat(
-            [features_long, inventory_long], ignore_index=True
-        )
+        features_long = prepare_features_for_db(features_df)
 
         # Store computed features in PostgreSQL
         await handler.push(

@@ -7,10 +7,16 @@ Functions:
                                  to match the database schema.
 """
 
+from typing import Set
+
 import numpy as np
 import pandas as pd
 
-from oil_dashboard.config.constants import BAKER_HUGHES_COLUMNS_US
+from oil_dashboard.config.constants import (
+    BAKER_HUGHES_COLUMNS_US,
+    INVENTORY_FEATURES,
+    TECHNICAL_INDICATORS,
+)
 
 
 def reshape_price_data_for_db(price_data: pd.DataFrame) -> pd.DataFrame:
@@ -169,28 +175,18 @@ def prepare_technical_indicators_for_db(
     pd.DataFrame
         _description_
     """
-    # Extract Technical Indicators (MA, Bollinger, RSI, MACD)
-    technical_indicator_columns = [
-        "MA50",
-        "MA200",
-        "BB_Upper",
-        "BB_Lower",
-        "RSI",
-        "MACD",
-        "MACD_Signal",
-    ]
 
     # Dynamically extract WTI & Brent versions of each indicator
     technical_indicators_df = features_df[
         ["date"]
         + [
             f"WTI_{col}"
-            for col in technical_indicator_columns
+            for col in TECHNICAL_INDICATORS
             if f"WTI_{col}" in features_df.columns
         ]
         + [
             f"Brent_{col}"
-            for col in technical_indicator_columns
+            for col in TECHNICAL_INDICATORS
             if f"Brent_{col}" in features_df.columns
         ]
     ].fillna(0)
@@ -222,7 +218,7 @@ def prepare_technical_indicators_for_db(
     technical_indicators_wide.columns = [
         "date",
         "symbol",
-    ] + technical_indicator_columns
+    ] + TECHNICAL_INDICATORS
 
     # Fill missing values with NULL (SQL default behavior)
     technical_indicators_wide = technical_indicators_wide.fillna(
@@ -232,5 +228,67 @@ def prepare_technical_indicators_for_db(
     return technical_indicators_wide
 
 
-def prepare_features_for_db(features_df: pd.DataFrame) -> pd.DataFrame:
-    pass
+def prepare_features_for_db(
+    features_df: pd.DataFrame, price_columns: Set[str]
+) -> pd.DataFrame:
+    """Prepare feature data for insertion into the PostgreSQL database
+
+    Converts price-based, technical indactors and inventory features into long format
+
+    Parameters
+    ----------
+    features_df : pd.DataFrame
+        DataFrame containing comptuted features, including
+        price-based, inventory and technical indicators.
+    price_columns : Set[str]
+        Set of raw price-related columns
+        (e.g. "Open_WTI", "Close_Brent") to exclude from
+        feature extraction.
+
+    Returns
+    -------
+    pd.DataFrame
+        Long-format DataFrame ready for database storage
+    """
+    # Extract only feature columns (exclusing price data)
+    feature_columns = set(features_df.columns).difference(price_columns)
+
+    # Extract technical indicators & price-based features in long format
+    features_long = features_df.melt(
+        id_vars=["date"],
+        value_vars=[
+            col for col in feature_columns if col not in INVENTORY_FEATURES
+        ],
+        var_name="symbol_feature",
+        value_name="feature_value",
+    )
+
+    # Extract symbol name (e.g., WTI, Brent) and feature name dynamically for non-inventory features
+    features_long[["symbol", "feature_name"]] = features_long[
+        "symbol_feature"
+    ].str.split("_", n=1, expand=True)
+
+    # rearrange the columns in features table
+    features_long = features_long[
+        ["date", "symbol", "feature_name", "feature_value"]
+    ]
+
+    # Handle potential NaNs before insertion
+    features_long = features_long.where(pd.notna(features_long), None)
+
+    # Extract inventory features separately
+    inventory_long = features_df.melt(
+        id_vars=["date"],
+        value_vars=list(INVENTORY_FEATURES),
+        var_name="feature_name",
+        value_name="feature_value",
+    )
+
+    # Assign `"INVENTORY"` as the symbol
+    inventory_long["symbol"] = "INVENTORY"
+
+    # Merge both DataFrames to ensure all features are included
+    final_features = pd.concat(
+        [features_long, inventory_long], ignore_index=True
+    )
+    return final_features

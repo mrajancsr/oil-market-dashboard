@@ -11,3 +11,20 @@ BAKER_HUGHES_COLUMNS_US = {
     "yearly_change": "Change from Last Year",
     "last_years_count_date": "Date of Last Year's Count",
 }
+
+INVENTORY_FEATURES = {
+    "Weekly Inventory Change",
+    "Weekly Percent Change",
+    "Inventory Zscore",
+    "Crude Oil Inventory",
+}
+
+TECHNICAL_INDICATORS = [
+    "MA50",
+    "MA200",
+    "BB_Upper",
+    "BB_Lower",
+    "RSI",
+    "MACD",
+    "MACD_Signal",
+]
