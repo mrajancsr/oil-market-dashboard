@@ -33,7 +33,7 @@ def calculate_moving_average(
 
     if len(df) < max(windows):
         raise ValueError(
-            f"Not enough data points ({len(df)}) to calculate {max(windows)}-day MA."
+            f"Not enough data points ({len(df)}) to calculate {max(windows)}-day MA."  # noqa
         )
 
     return df.assign(
@@ -105,7 +105,7 @@ def calculate_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
     """
     if len(prices) < window:
         raise ValueError(
-            f"Not enough data points ({len(prices)}) to calculate {window}-day RSI."
+            f"Not enough data points ({len(prices)}) to calculate {window}-day RSI."  # noqa
         )
     delta = prices.diff()
 
@@ -176,7 +176,7 @@ def calculate_macd(
 
 
 def add_technical_indicators(
-    df: pd.DataFrame, column: str = "WTI"
+    df: pd.DataFrame, columns: List[str]
 ) -> pd.DataFrame:
     """
     Add technical indicators to the oil price data.
@@ -191,13 +191,14 @@ def add_technical_indicators(
     pd.DataFrame
         DataFrame with new columns for technical indicators.
     """
-    validate_column_presence(df, column)
     # Ensure Date index is sorted (just in case)
     df = df.sort_index()
+    for column in columns:
+        validate_column_presence(df, column)
 
-    df = calculate_moving_average(df, column)
-    df = calculate_bollinger_bands(df, column)
-    df[f"{column}_RSI"] = calculate_rsi(df[column])
-    df = calculate_macd(df, column)
+        df = calculate_moving_average(df, column)
+        df = calculate_bollinger_bands(df, column)
+        df[f"{column}_RSI"] = calculate_rsi(df[column])
+        df = calculate_macd(df, column)
 
     return df
