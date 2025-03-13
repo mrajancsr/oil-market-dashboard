@@ -230,3 +230,7 @@ def prepare_technical_indicators_for_db(
     ).replace([np.nan], [None])
 
     return technical_indicators_wide
+
+
+def prepare_features_for_db(features_df: pd.DataFrame) -> pd.DataFrame:
+    pass

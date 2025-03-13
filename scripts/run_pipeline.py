@@ -54,7 +54,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             technical_indicators_df.itertuples(index=False),
         )
         logger.info(
-            f"Inserted {len(technical_indicators_df)} rows into commodity.technical_indicators"
+            f"Inserted {len(technical_indicators_df)} rows into commodity.technical_indicators"  # noqa
         )
 
         # Extract Features (WTI Log Return, Spread, etc.) (long format)
@@ -91,7 +91,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             ["date", "symbol", "feature_name", "feature_value"]
         ]
 
-        # Extract inventory features separately & assign `"INVENTORY"` as the symbol
+        # Extract inventory features separately
         inventory_long = features_df.melt(
             id_vars=["date"],
             value_vars=list(inventory_features),
@@ -155,7 +155,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                 data_frames[DataSourceType.EIA.name].itertuples(index=False),
             )
             logger.info(
-                f"Inserted {len(data_frames[DataSourceType.EIA.name])} rows into commodity.inventory_data"
+                f"Inserted {len(data_frames[DataSourceType.EIA.name])} rows into commodity.inventory_data"  # noqa
             )
 
         # Reshape & Insert Rig Count Data (Baker Hughes)
@@ -182,7 +182,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                 ),
             )
             logger.info(
-                f"Inserted {len(data_frames[DataSourceType.BAKER_HUGHES.name])} rows into commodity.rig_count_data"
+                f"Inserted {len(data_frames[DataSourceType.BAKER_HUGHES.name])} rows into commodity.rig_count_data"  # noqa
             )
 
 
