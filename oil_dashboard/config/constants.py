@@ -18,13 +18,3 @@ INVENTORY_FEATURES = {
     "Inventory Zscore",
     "Crude Oil Inventory",
 }
-
-TECHNICAL_INDICATORS = [
-    "MA50",
-    "MA200",
-    "BB_Upper",
-    "BB_Lower",
-    "RSI",
-    "MACD",
-    "MACD_Signal",
-]

@@ -9,6 +9,11 @@ from neptunedb import AsyncDBHandler
 from neptunedb.db_config import DBConfig
 
 from oil_dashboard.config.data_source_config import DataSourceType
+from oil_dashboard.config.sql_tables import (
+    PRICE_DATA_TABLE_COLUMNS,
+    RIG_COUNT_DATA_TABLE_COLUMNS,
+    TECHNICAL_INDICATORS_TABLE_COLUMNS,
+)
 from oil_dashboard.pipeline.feature_engineering import generate_features
 from oil_dashboard.pipeline.oil_pipeline import OilPipeLine
 from oil_dashboard.utils.data_transformations import (
@@ -51,7 +56,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         await handler.push(
             "technical_indicators",
             "commodity",
-            technical_indicators_df.columns,
+            TECHNICAL_INDICATORS_TABLE_COLUMNS,
             technical_indicators_df.itertuples(index=False),
         )
         logger.info(
@@ -81,7 +86,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             await handler.push(
                 "price_data",
                 "commodity",
-                ["date", "symbol", "open", "high", "low", "close", "volume"],
+                PRICE_DATA_TABLE_COLUMNS,
                 data_frames[DataSourceType.YAHOO_FINANCE.name].itertuples(
                     index=False
                 ),
@@ -121,15 +126,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             await handler.push(
                 "rig_count_data",
                 "commodity",
-                [
-                    "date",
-                    "total_rigs",
-                    "oil_rigs",
-                    "gas_rigs",
-                    "misc_rigs",
-                    "weekly_change",
-                    "yoy_change",
-                ],
+                RIG_COUNT_DATA_TABLE_COLUMNS,
                 data_frames[DataSourceType.BAKER_HUGHES.name].itertuples(
                     index=False
                 ),

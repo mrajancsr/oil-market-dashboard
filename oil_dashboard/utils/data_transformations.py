@@ -9,13 +9,15 @@ Functions:
 
 from typing import Set
 
-import numpy as np
 import pandas as pd
 
 from oil_dashboard.config.constants import (
     BAKER_HUGHES_COLUMNS_US,
     INVENTORY_FEATURES,
+)
+from oil_dashboard.config.sql_tables import (
     TECHNICAL_INDICATORS,
+    TECHNICAL_INDICATORS_TABLE_COLUMNS,
 )
 
 
@@ -163,41 +165,44 @@ def reshape_baker_hughes_to_db(rig_data: pd.DataFrame) -> pd.DataFrame:
 def prepare_technical_indicators_for_db(
     features_df: pd.DataFrame,
 ) -> pd.DataFrame:
-    """_summary_
+    """Prepares technical indicators for database insertion.
+
+    This function:
+    - Extracts technical indicators for WTI & Brent dynamically
+    - Converts data into long format ('date', 'symbol', 'indicator_name', 'value')
+    - Pivots back to wide format (`date`, `symbol`, `ma50`, `rsi`, etc.)
+    - Ensures missing values are stored as `NULL` for PostgreSQL compatibility
 
     Parameters
     ----------
     features_df : pd.DataFrame
-        _description_
+        DataFrame containing computed technical indicators
 
     Returns
     -------
     pd.DataFrame
-        _description_
+        Wide-Format DataFrmae with (`date`, `symbol`, `ma50`, `rsi`, `macd`, etc.)
     """
 
-    # Dynamically extract WTI & Brent versions of each indicator
-    technical_indicators_df = features_df[
-        ["date"]
-        + [
-            f"WTI_{col}"
-            for col in TECHNICAL_INDICATORS
-            if f"WTI_{col}" in features_df.columns
-        ]
-        + [
-            f"Brent_{col}"
-            for col in TECHNICAL_INDICATORS
-            if f"Brent_{col}" in features_df.columns
-        ]
-    ].fillna(0)
+    # Dynamically extract WTI & Brent indicators
+    wti_columns = (
+        features_df.keys()
+        .intersection({f"WTI_{col}" for col in TECHNICAL_INDICATORS})
+        .to_list()
+    )
+    brent_columns = (
+        features_df.keys()
+        .intersection({f"Brent_{col}" for col in TECHNICAL_INDICATORS})
+        .to_list()
+    )
+
+    # Select only the relevant columns
+    technical_indicator_columns = ["date"] + wti_columns + brent_columns
 
     # Convert technical indicators to long format
-    technical_indicators_long = pd.melt(
-        technical_indicators_df,
+    technical_indicators_long = features_df.melt(
         id_vars=["date"],  # Keep `date`
-        value_vars=[
-            col for col in technical_indicators_df.columns if col != "date"
-        ],  # Select all indicator columns
+        value_vars=technical_indicator_columns[1:],  # Exclude `date`
         var_name="symbol_feature",
         value_name="value",
     )
@@ -210,20 +215,23 @@ def prepare_technical_indicators_for_db(
     )
 
     # Pivot to wide format matching database schema
-    technical_indicators_wide = technical_indicators_long.pivot(
-        index=["date", "symbol"], columns="indicator_name", values="value"
-    ).reset_index()
+    technical_indicators_wide = (
+        technical_indicators_long.pivot(
+            index=["date", "symbol"], columns="indicator_name", values="value"
+        )
+        .reset_index()
+        .rename_axis(None, axis=1)
+    )
 
     # Ensure column names match SQL schema
-    technical_indicators_wide.columns = [
-        "date",
-        "symbol",
-    ] + TECHNICAL_INDICATORS
+    technical_indicators_wide = technical_indicators_wide[
+        TECHNICAL_INDICATORS_TABLE_COLUMNS
+    ]
 
     # Fill missing values with NULL (SQL default behavior)
-    technical_indicators_wide = technical_indicators_wide.fillna(
-        np.nan
-    ).replace([np.nan], [None])
+    technical_indicators_wide = technical_indicators_wide.where(
+        pd.notna(technical_indicators_wide), None
+    )
 
     return technical_indicators_wide
 
@@ -251,7 +259,7 @@ def prepare_features_for_db(
         Long-format DataFrame ready for database storage
     """
     # Extract only feature columns (exclusing price data)
-    feature_columns = set(features_df.columns).difference(price_columns)
+    feature_columns = features_df.keys().difference(price_columns)
 
     # Extract technical indicators & price-based features in long format
     features_long = features_df.melt(
