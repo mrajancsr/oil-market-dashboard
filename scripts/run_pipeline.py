@@ -2,9 +2,10 @@ import asyncio
 import logging
 import os
 from datetime import date
-from typing import Dict
+from typing import Dict, Iterator, List, Tuple
 
 import pandas as pd
+import uvloop
 from neptunedb import AsyncDBHandler
 from neptunedb.db_config import DBConfig
 
@@ -25,6 +26,8 @@ from oil_dashboard.utils.data_transformations import (
     reshape_price_data_for_db,
 )
 
+loop: uvloop.EventLoopPolicy = uvloop.EventLoopPolicy()
+
 logging.basicConfig(
     level=logging.INFO,  # ✅ Change to DEBUG for more details
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -32,12 +35,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def push_with_logging(
+    handler: AsyncDBHandler,
+    table: str,
+    schema: str,
+    columns: List[str],
+    data: Iterator[Tuple],
+) -> None:
+    pass
+
+
 async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
-    """Saves the dataframe to postgresql
+    """_summary_
 
     Parameters
     ----------
-    master_df : pd.DataFrame
+    data_frames : Dict[str, pd.DataFrame]
         _description_
     """
     config = DBConfig.from_env()
