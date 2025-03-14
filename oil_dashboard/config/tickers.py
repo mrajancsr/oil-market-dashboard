@@ -8,8 +8,8 @@ class TickerMapping:
 
 
 TICKERS = [
-    TickerMapping(ticker="BZ=F", name="Brent"),
-    TickerMapping(ticker="CL=F", name="WTI"),
-    TickerMapping(ticker="^OVX", name="OVX"),  # oil volatility index
-    TickerMapping(ticker="DX-Y.NYB", name="DXY"),  # US Dollar Index
+    TickerMapping(ticker="BZ=F", name="brent"),
+    TickerMapping(ticker="CL=F", name="wti"),
+    TickerMapping(ticker="^OVX", name="ovx"),  # oil volatility index
+    TickerMapping(ticker="DX-Y.NYB", name="dxy"),  # US Dollar Index
 ]

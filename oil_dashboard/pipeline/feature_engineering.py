@@ -3,6 +3,7 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 
+from oil_dashboard.config.data_source_config import DataSourceType
 from oil_dashboard.pipeline.technical_indicators import (
     add_technical_indicators,
 )
@@ -12,38 +13,35 @@ def add_price_based_features(
     oil_data: pd.DataFrame, columns: List[str]
 ) -> pd.DataFrame:
     for col in columns:
-        oil_data[f"{col}_Log_Return"] = np.log(1 + oil_data[col].pct_change())
-        oil_data[f"{col}_Momentum"] = oil_data[col].pct_change(5)
-        oil_data[f"{col}_Rolling_Volatility"] = (
-            oil_data[f"{col}_Log_Return"].rolling(7).std()
+        oil_data[f"{col}_log_return"] = np.log(1 + oil_data[col].pct_change())
+        oil_data[f"{col}_momentum"] = oil_data[col].pct_change(5)
+        oil_data[f"{col}_rolling_volatility"] = (
+            oil_data[f"{col}_log_return"].rolling(7).std()
         )
-        oil_data[f"{col}_Weekly_Price_Change"] = (
+        oil_data[f"{col}_weekly_price_change"] = (
             oil_data[col].pct_change(5) * 100
         )
 
     # Compute WTI-Brent Spread
-    oil_data["WTI-Brent Spread"] = oil_data["WTI"] - oil_data["Brent"]
+    oil_data["wti-brent spread"] = oil_data["wti"] - oil_data["brent"]
 
-    oil_data["WTI-7D MA"] = oil_data["WTI"].rolling(7).mean()
-    oil_data["Brent-7D MA"] = oil_data["Brent"].rolling(7).mean()
-    oil_data["OVX 7D MA"] = oil_data["OVX"].rolling(7).mean()
+    oil_data["wti-7D MA"] = oil_data["wti"].rolling(7).mean()
+    oil_data["brent-7D MA"] = oil_data["brent"].rolling(7).mean()
+    oil_data["ovx-7D MA"] = oil_data["ovx"].rolling(7).mean()
 
     return oil_data
 
 
-def add_inventory_based_features(inventory_df: pd.DataFrame) -> pd.DataFrame:
+def add_inventory_based_features(
+    inventory_df: pd.DataFrame, col: str = "crude_oil_inventory"
+) -> pd.DataFrame:
     # weekly inventory change and z-scores
-    inventory_df["Weekly Inventory Change"] = inventory_df[
-        "Crude Oil Inventory"
-    ].diff()
-    inventory_df["Weekly Percent Change"] = inventory_df[
-        "Crude Oil Inventory"
-    ].pct_change()
+    inventory_df["weekly_inventory_change"] = inventory_df[col].diff()
+    inventory_df["weekly_percent_change"] = inventory_df[col].pct_change()
     inventory_daily = inventory_df.resample("D").ffill()
-    inventory_daily["Inventory Zscore"] = (
-        inventory_daily["Crude Oil Inventory"]
-        - inventory_daily["Crude Oil Inventory"].mean()
-    ) / inventory_daily["Crude Oil Inventory"].std()
+    inventory_daily["inventory_zscore"] = (
+        inventory_daily[col] - inventory_daily[col].mean()
+    ) / inventory_daily[col].std()
 
     return inventory_daily
 
@@ -79,8 +77,8 @@ def generate_features(
             "Missing required data sources for feature engineering"
         )
 
-    oil_data = data_frames["YAHOO_FINANCE"].copy()
-    oil_inventory = data_frames["EIA"].copy()
+    oil_data = data_frames[DataSourceType.YAHOO_FINANCE.name].copy()
+    oil_inventory = data_frames[DataSourceType.EIA.name].copy()
 
     if oil_data.empty or oil_inventory.empty:
         raise ValueError("Data Not Available for feature engineering")
@@ -90,15 +88,15 @@ def generate_features(
 
     # Rename Close Price Columns Before Computing Price Based Features
     rename_map = {
-        "Close_WTI": "WTI",
-        "Close_Brent": "Brent",
-        "Close_OVX": "OVX",
-        "Close_DXY": "DXY",
+        "close_wti": "wti",
+        "close_brent": "brent",
+        "close_ovx": "ovx",
+        "close_dxy": "dxy",
     }
 
     oil_data.rename(columns=rename_map, inplace=True)
 
-    oil_data = add_price_based_features(oil_data, columns=["WTI", "Brent"])
+    oil_data = add_price_based_features(oil_data, columns=["wti", "brent"])
 
     inventory_daily = add_inventory_based_features(oil_inventory)
 
@@ -106,7 +104,7 @@ def generate_features(
     master_df = oil_data.join(inventory_daily, how="outer").ffill()
 
     # Add technical indicators via helper function
-    master_df = add_technical_indicators(master_df, columns=["WTI", "Brent"])
+    master_df = add_technical_indicators(master_df, columns=["wti", "brent"])
 
     # Restore columns back to their original names
     reverse_map = {value: key for key, value in rename_map.items()}

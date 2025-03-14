@@ -3,11 +3,11 @@ import os
 from datetime import date
 from typing import Dict, List
 
-import aiologger
 import pandas as pd
 import uvloop
 from neptunedb import AsyncDBHandler
 from neptunedb.db_config import DBConfig
+from neptunedb.dbhandler import async_logger
 
 from oil_dashboard.config.data_source_config import DataSourceType
 from oil_dashboard.config.sql_tables import (
@@ -28,8 +28,6 @@ from oil_dashboard.utils.data_transformations import (
 )
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-async_logger = aiologger.Logger.with_default_handlers(name="async_logger")
 
 
 async def push_with_logging(
@@ -101,8 +99,26 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
     # Check if there's data to process
     if not data_frames:
         await async_logger.warning(
-            "No data found.  Skipping database insertion"
+            "No data found. Skipping database insertion."
         )
+        return
+
+    # Validate Required Data Sources Exist
+    missing_sources = [
+        source.name
+        for source in [
+            DataSourceType.YAHOO_FINANCE,
+            DataSourceType.EIA,
+            DataSourceType.BAKER_HUGHES,
+        ]
+        if source.name not in data_frames
+    ]
+
+    if missing_sources:
+        await async_logger.error(
+            f"Missing required data sources: {', '.join(missing_sources)}. Skipping database insertion."
+        )
+        return
 
     config = DBConfig.from_env()
 
@@ -116,37 +132,37 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         technical_indicators_df = prepare_technical_indicators_for_db(
             features_df
         )
-        features_long = prepare_features_for_db(features_df)
 
-        # Reshape and Validate Price Data Before Insert
-        if DataSourceType.YAHOO_FINANCE.name in data_frames:
-            data_frames[DataSourceType.YAHOO_FINANCE.name] = (
-                reshape_price_data_for_db(
-                    data_frames[DataSourceType.YAHOO_FINANCE.name]
-                )
+        # Extract Price Columns for Features
+        PRICE_COLUMNS = data_frames[DataSourceType.YAHOO_FINANCE.name].columns
+        features_long = prepare_features_for_db(features_df, PRICE_COLUMNS)
+        # Reshape & Insert Price Data
+        data_frames[DataSourceType.YAHOO_FINANCE.name] = (
+            reshape_price_data_for_db(
+                data_frames[DataSourceType.YAHOO_FINANCE.name]
             )
+        )
 
         # Reshape & Insert Inventory Data
-        if DataSourceType.EIA.name in data_frames:
-            data_frames[DataSourceType.EIA.name] = (
-                reshape_inventory_data_for_db(
-                    data_frames[DataSourceType.EIA.name]
-                )
-            )
+        data_frames[DataSourceType.EIA.name] = reshape_inventory_data_for_db(
+            data_frames[DataSourceType.EIA.name]
+        )
 
         # Reshape & Insert Rig Count Data Before Insert
-        if DataSourceType.BAKER_HUGHES.name in data_frames:
-            data_frames[DataSourceType.BAKER_HUGHES.name] = (
-                reshape_baker_hughes_to_db(
-                    data_frames[DataSourceType.BAKER_HUGHES.name]
-                )
+        data_frames[DataSourceType.BAKER_HUGHES.name] = (
+            reshape_baker_hughes_to_db(
+                data_frames[DataSourceType.BAKER_HUGHES.name]
             )
+        )
 
-        # Store all tasks  in a list before executing
+        # Store all tasks in a list before executing
         tasks = []
 
         # Insert Technical Indicators if data exists
         if not technical_indicators_df.empty:
+            await async_logger.info(
+                f"Preparing to insert {len(technical_indicators_df)} rows into commodity.technical_indicators"
+            )
             tasks.append(
                 push_with_logging(
                     handler,
@@ -156,8 +172,12 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                     technical_indicators_df,
                 )
             )
+
         # Insert Features if data exists
         if not features_long.empty:
+            await async_logger.info(
+                f"Preparing to insert {len(features_long)} rows into commodity.features"
+            )
             tasks.append(
                 push_with_logging(
                     handler,
@@ -169,10 +189,10 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             )
 
         # Insert Price Data if available
-        if (
-            DataSourceType.YAHOO_FINANCE.name in data_frames
-            and not data_frames[DataSourceType.YAHOO_FINANCE.name].empty
-        ):
+        if not data_frames[DataSourceType.YAHOO_FINANCE.name].empty:
+            await async_logger.info(
+                f"Preparing to insert {len(data_frames[DataSourceType.YAHOO_FINANCE.name])} rows into commodity.price_data"
+            )
             tasks.append(
                 push_with_logging(
                     handler,
@@ -184,10 +204,10 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             )
 
         # Insert Inventory Data if available
-        if (
-            DataSourceType.EIA.name in data_frames
-            and not data_frames[DataSourceType.EIA.name].empty
-        ):
+        if not data_frames[DataSourceType.EIA.name].empty:
+            await async_logger.info(
+                f"Preparing to insert {len(data_frames[DataSourceType.EIA.name])} rows into commodity.inventory_data"
+            )
             tasks.append(
                 push_with_logging(
                     handler,
@@ -199,10 +219,10 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             )
 
         # Insert Rig Count Data if available
-        if (
-            DataSourceType.BAKER_HUGHES.name in data_frames
-            and not data_frames[DataSourceType.BAKER_HUGHES.name].empty
-        ):
+        if not data_frames[DataSourceType.BAKER_HUGHES.name].empty:
+            await async_logger.info(
+                f"Preparing to insert {len(data_frames[DataSourceType.BAKER_HUGHES.name])} rows into commodity.rig_count_data"
+            )
             tasks.append(
                 push_with_logging(
                     handler,
@@ -212,10 +232,11 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                     data_frames[DataSourceType.BAKER_HUGHES.name],
                 )
             )
+
         # Run all inserts concurrently
         if tasks:
             await asyncio.gather(*tasks)
-            await async_logger("All data inserted successfully")
+            await async_logger.info("All data inserted successfully.")
         else:
             await async_logger.warning(
                 "No valid data to insert. Skipping database write."
@@ -228,7 +249,7 @@ def main():
         raise ValueError("EIA_API_KEY environment variable is required")
 
     pipeline = OilPipeLine(
-        start_date=date(2024, 1, 1), end_date=date.today(), api_key=api_key
+        start_date=date(2024, 8, 1), end_date=date.today(), api_key=api_key
     )
 
     os.makedirs("data", exist_ok=True)
@@ -238,6 +259,8 @@ def main():
 
     print("Saving to PostGreSQL Database")
     asyncio.run(save_to_db(data_frames))
+
+    print("Finished gathering data...")
 
 
 if __name__ == "__main__":

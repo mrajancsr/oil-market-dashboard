@@ -38,7 +38,7 @@ def calculate_moving_average(
 
     return df.assign(
         **{
-            f"{column}_MA{window}": df[column].rolling(window).mean()
+            f"{column}_ma{window}": df[column].rolling(window).mean()
             for window in windows
         }
     ).copy()
@@ -79,8 +79,8 @@ def calculate_bollinger_bands(
 
     return df.assign(
         **{
-            f"{column}_BB_Upper": rolling_mean + (2 * rolling_std),
-            f"{column}_BB_Lower": rolling_mean - (2 * rolling_std),
+            f"{column}_bb_upper": rolling_mean + (2 * rolling_std),
+            f"{column}_bb_lower": rolling_mean - (2 * rolling_std),
         }
     ).copy()
 
@@ -123,7 +123,7 @@ def calculate_rsi(prices: pd.Series, window: int = 14) -> pd.Series:
 
 def calculate_macd(
     df: pd.DataFrame,
-    column: str = "WTI",
+    column: str = "wti",
     fast: int = 12,
     slow: int = 26,
     signal: int = 9,
@@ -138,7 +138,7 @@ def calculate_macd(
     df : pd.DataFrame
         DataFrame containing price data
     column : str, optional
-        Column to calculate MACD for, by default "WTI"
+        Column to calculate MACD for, by default "wti"
     fast : int, optional
         Fast EMA period, by default 12
     slow : int, optional
@@ -167,8 +167,8 @@ def calculate_macd(
     exp26 = df[column].ewm(span=slow, adjust=False).mean()
     return df.assign(
         **{
-            f"{column}_MACD": exp12 - exp26,
-            f"{column}_MACD_Signal": (exp12 - exp26)
+            f"{column}_macd": exp12 - exp26,
+            f"{column}_macd_Signal": (exp12 - exp26)
             .ewm(span=signal, adjust=False)
             .mean(),
         }
@@ -198,7 +198,7 @@ def add_technical_indicators(
 
         df = calculate_moving_average(df, column)
         df = calculate_bollinger_bands(df, column)
-        df[f"{column}_RSI"] = calculate_rsi(df[column])
+        df[f"{column}_rsi"] = calculate_rsi(df[column])
         df = calculate_macd(df, column)
 
     return df

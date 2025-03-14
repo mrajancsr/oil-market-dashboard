@@ -40,10 +40,11 @@ class YahooFinanceSource(DataSource):
         )
 
         oil_data.rename(columns=ticker_map, inplace=True)
-        oil_data.index.name = "Date"
+        oil_data.index.name = "date"
 
         # Flatten multiindex to get clean column names
         oil_data.columns = [
             "_".join(col).strip() for col in oil_data.columns.values
         ]
+        oil_data.rename(columns=str.lower, inplace=True)
         return oil_data
