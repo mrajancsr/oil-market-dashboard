@@ -40,3 +40,12 @@ RIG_COUNT_DATA_TABLE_COLUMNS = [
     "weekly_change",
     "yoy_change",
 ]
+COMMODITY_FEATURES_TABLE_COLUMNS = [
+    "date",
+    "symbol",
+    "feature_name",
+    "feature_value",
+    "weekly_change",
+    "percent_change",
+    "zscore",
+]

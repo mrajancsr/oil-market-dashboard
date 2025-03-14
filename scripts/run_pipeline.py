@@ -1,7 +1,7 @@
 import asyncio
 import os
 from datetime import date
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, List
 
 import aiologger
 import pandas as pd
@@ -11,6 +11,7 @@ from neptunedb.db_config import DBConfig
 
 from oil_dashboard.config.data_source_config import DataSourceType
 from oil_dashboard.config.sql_tables import (
+    COMMODITY_FEATURES_TABLE_COLUMNS,
     PRICE_DATA_TABLE_COLUMNS,
     RIG_COUNT_DATA_TABLE_COLUMNS,
     TECHNICAL_INDICATORS_TABLE_COLUMNS,
@@ -162,7 +163,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                     handler,
                     SQLTableType.FEATURES.value,
                     SQLTableType.SCHEMA_NAME.value,
-                    ["date", "symbol", "feature_name", "feature_value"],
+                    COMMODITY_FEATURES_TABLE_COLUMNS,
                     features_long,
                 )
             )
