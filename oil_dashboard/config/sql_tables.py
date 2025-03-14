@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class SQLTableType(Enum):
+    SCHEMA_NAME = "commodity"
     PRICE_DATA = "price_data"
     TECHNICAL_INDICATORS = "technical_indicators"
     RIG_COUNT_DATA = "rig_count_data"

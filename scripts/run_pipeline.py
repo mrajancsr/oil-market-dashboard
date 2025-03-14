@@ -13,6 +13,7 @@ from oil_dashboard.config.sql_tables import (
     PRICE_DATA_TABLE_COLUMNS,
     RIG_COUNT_DATA_TABLE_COLUMNS,
     TECHNICAL_INDICATORS_TABLE_COLUMNS,
+    SQLTableType,
 )
 from oil_dashboard.pipeline.feature_engineering import generate_features
 from oil_dashboard.pipeline.oil_pipeline import OilPipeLine
@@ -54,8 +55,8 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
         # Store Indicators
         await handler.push(
-            "technical_indicators",
-            "commodity",
+            SQLTableType.TECHNICAL_INDICATORS.value,
+            SQLTableType.SCHEMA_NAME.value,
             TECHNICAL_INDICATORS_TABLE_COLUMNS,
             technical_indicators_df.itertuples(index=False),
         )
@@ -67,8 +68,8 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
         # Store computed features in PostgreSQL
         await handler.push(
-            "features",
-            "commodity",
+            SQLTableType.FEATURES.value,
+            SQLTableType.SCHEMA_NAME.value,
             ["date", "symbol", "feature_name", "feature_value"],
             features_long.itertuples(index=False),
         )
@@ -84,8 +85,8 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             )
 
             await handler.push(
-                "price_data",
-                "commodity",
+                SQLTableType.PRICE_DATA.value,
+                SQLTableType.SCHEMA_NAME.value,
                 PRICE_DATA_TABLE_COLUMNS,
                 data_frames[DataSourceType.YAHOO_FINANCE.name].itertuples(
                     index=False
@@ -103,8 +104,8 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                 )
             )
             await handler.push(
-                "inventory_data",
-                "commodity",
+                SQLTableType.INVENTORY_DATA.value,
+                SQLTableType.SCHEMA_NAME.value,
                 [
                     "date",
                     "product",
@@ -124,8 +125,8 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
                 )
             )
             await handler.push(
-                "rig_count_data",
-                "commodity",
+                SQLTableType.RIG_COUNT_DATA.value,
+                SQLTableType.SCHEMA_NAME.value,
                 RIG_COUNT_DATA_TABLE_COLUMNS,
                 data_frames[DataSourceType.BAKER_HUGHES.name].itertuples(
                     index=False
