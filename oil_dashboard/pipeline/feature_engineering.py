@@ -25,9 +25,9 @@ def add_price_based_features(
     # Compute WTI-Brent Spread
     oil_data["wti-brent spread"] = oil_data["wti"] - oil_data["brent"]
 
-    oil_data["wti-7D MA"] = oil_data["wti"].rolling(7).mean()
-    oil_data["brent-7D MA"] = oil_data["brent"].rolling(7).mean()
-    oil_data["ovx-7D MA"] = oil_data["ovx"].rolling(7).mean()
+    oil_data["wti_7D_MA"] = oil_data["wti"].rolling(7).mean()
+    oil_data["brent_7D_MA"] = oil_data["brent"].rolling(7).mean()
+    oil_data["ovx_7D_MA"] = oil_data["ovx"].rolling(7).mean()
 
     return oil_data
 

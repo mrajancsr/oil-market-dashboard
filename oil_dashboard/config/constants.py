@@ -13,8 +13,8 @@ BAKER_HUGHES_COLUMNS_US = {
 }
 
 INVENTORY_FEATURES = {
-    "Weekly Inventory Change",
-    "Weekly Percent Change",
-    "Inventory Zscore",
-    "Crude Oil Inventory",
+    "weekly_inventory_change",
+    "weekly_percent_change",
+    "inventory_zscore",
+    "crude_oil_inventory",
 }

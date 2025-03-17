@@ -11,13 +11,13 @@ class SQLTableType(Enum):
 
 
 TECHNICAL_INDICATORS = [
-    "MA50",
-    "MA200",
-    "BB_Upper",
-    "BB_Lower",
-    "RSI",
-    "MACD",
-    "MACD_Signal",
+    "ma50",
+    "ma200",
+    "bb_upper",
+    "bb_lower",
+    "rsi",
+    "macd",
+    "macd_signal",
 ]
 
 # Tables in PostGreSQL
@@ -45,7 +45,4 @@ COMMODITY_FEATURES_TABLE_COLUMNS = [
     "symbol",
     "feature_name",
     "feature_value",
-    "weekly_change",
-    "percent_change",
-    "zscore",
 ]

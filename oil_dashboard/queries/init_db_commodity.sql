@@ -4,6 +4,13 @@
 -- Create schema
 CREATE SCHEMA IF NOT EXISTS commodity;
 
+DROP TABLE IF EXISTS commodity.price_data;
+DROP TABLE IF EXISTS commodity.technical_indicators;
+DROP TABLE IF EXISTS commodity.inventory_data;
+DROP TABLE IF EXISTS commodity.rig_count_data;
+DROP TABLE IF EXISTS commodity.factors;
+DROP TABLE IF EXISTS commodity.features;
+
 -- Price Data Table (WTI, Brent, DXY etc)
 CREATE TABLE IF NOT EXISTS commodity.price_data (
     date DATE NOT NULL,
@@ -74,8 +81,5 @@ CREATE TABLE IF NOT EXISTS commodity.features (
     symbol TEXT NOT NULL,
     feature_name TEXT NOT NULL,
     feature_value DOUBLE PRECISION NOT NULL,
-    weekly_change REAL,
-    percent_change REAL,
-    zscore REAL,
     PRIMARY KEY (date, symbol, feature_name)
 );

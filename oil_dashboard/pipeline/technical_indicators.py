@@ -168,7 +168,7 @@ def calculate_macd(
     return df.assign(
         **{
             f"{column}_macd": exp12 - exp26,
-            f"{column}_macd_Signal": (exp12 - exp26)
+            f"{column}_macd_signal": (exp12 - exp26)
             .ewm(span=signal, adjust=False)
             .mean(),
         }

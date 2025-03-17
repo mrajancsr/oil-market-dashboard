@@ -54,10 +54,10 @@ class EIASource(DataSource):
         # Keep only the relevant column, rename it, and ensure data type
         inventory_data = inventory_data[["value"]]
         inventory_data.rename(
-            columns={"value": "Crude Oil Inventory"}, inplace=True
+            columns={"value": "crude_oil_inventory"}, inplace=True
         )
-        inventory_data["Crude Oil Inventory"] = inventory_data[
-            "Crude Oil Inventory"
+        inventory_data["crude_oil_inventory"] = inventory_data[
+            "crude_oil_inventory"
         ].astype(int)
 
         inventory_data.dropna(inplace=True)

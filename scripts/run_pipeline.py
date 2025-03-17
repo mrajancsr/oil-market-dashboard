@@ -81,7 +81,8 @@ async def push_with_logging(
 
 async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
     """
-    Processes, transforms, and asynchronously inserts various data sources into PostgreSQL.
+    Processes, transforms, and asynchronously inserts various data sources
+    into PostgreSQL.
 
     This function:
     - Generates features from raw market data.
@@ -116,7 +117,8 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
     if missing_sources:
         await async_logger.error(
-            f"Missing required data sources: {', '.join(missing_sources)}. Skipping database insertion."
+            f"Missing required data sources: {', '.join(missing_sources)}. \
+                Skipping database insertion."
         )
         return
 
@@ -243,7 +245,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
             )
 
 
-def main():
+async def main():
     api_key = os.getenv("EIA_API_KEY")
     if not api_key:
         raise ValueError("EIA_API_KEY environment variable is required")
@@ -253,15 +255,18 @@ def main():
     )
 
     os.makedirs("data", exist_ok=True)
+    try:
+        print("Fetching data sources...")
+        data_frames: Dict[str, pd.DataFrame] = pipeline.fetch_all_data()
 
-    print("Fetching data sources...")
-    data_frames: Dict[str, pd.DataFrame] = pipeline.fetch_all_data()
+        print("Saving to PostGreSQL Database")
+        await save_to_db(data_frames)
 
-    print("Saving to PostGreSQL Database")
-    asyncio.run(save_to_db(data_frames))
+    finally:
+        await async_logger.shutdown()
 
-    print("Finished gathering data...")
+        print("Finished gathering data...")
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

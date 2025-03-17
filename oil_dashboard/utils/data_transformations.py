@@ -16,6 +16,8 @@ from oil_dashboard.config.constants import (
     INVENTORY_FEATURES,
 )
 from oil_dashboard.config.sql_tables import (
+    COMMODITY_FEATURES_TABLE_COLUMNS,
+    PRICE_DATA_TABLE_COLUMNS,
     TECHNICAL_INDICATORS,
     TECHNICAL_INDICATORS_TABLE_COLUMNS,
 )
@@ -48,31 +50,29 @@ def reshape_price_data_for_db(price_data: pd.DataFrame) -> pd.DataFrame:
 
     # Melt DataFrame into long format (Date, Ticker, Column, Value)
     df_long = price_data.melt(
-        id_vars=["Date"], var_name="Column", value_name="Value"
+        id_vars=["date"], var_name="column", value_name="value"
     )
 
     # Extract Ticker and OHLCV type from column names
-    df_long[["Type", "Ticker"]] = df_long["Column"].str.split("_", expand=True)
+    df_long[["type", "ticker"]] = df_long["column"].str.split("_", expand=True)
 
     # Pivot table to get correct structure: (Date, Ticker, OHLCV)
     df_final = df_long.pivot(
-        index=["Date", "Ticker"], columns="Type", values="Value"
+        index=["date", "ticker"], columns="type", values="value"
     ).reset_index()
 
     # Rename columns to match PostgreSQL schema
-    df_final.rename(columns={"Ticker": "symbol", "Date": "date"}, inplace=True)
+    df_final.rename(columns={"ticker": "symbol"}, inplace=True)
 
     # Ensure all column names are lowercase
     df_final.columns = df_final.columns.str.lower()
 
     # Reorder columns to match PostgreSQL schema
-    df_final = df_final[
-        ["date", "symbol", "open", "high", "low", "close", "volume"]
-    ]
+    df_final = df_final[PRICE_DATA_TABLE_COLUMNS]
 
     # Drop rows where **all columns except date & symbol are NaN**
     df_final.dropna(
-        subset=["open", "high", "low", "close", "volume"],
+        subset=PRICE_DATA_TABLE_COLUMNS[2:],
         how="all",
         inplace=True,
     )
@@ -111,12 +111,12 @@ def reshape_inventory_data_for_db(
 
     # Rename columns to match PostgreSQL schema
     df.rename(
-        columns={"period": "date", "Crude Oil Inventory": "inventory"},
+        columns={"period": "date", "crude_oil_inventory": "inventory"},
         inplace=True,
     )
 
     # Add `product` column (required by schema)
-    df["product"] = "Crude Oil"
+    df["product"] = "crude_oil"
 
     # Ensure correct column order
     df = df[["date", "product", "inventory"]]
@@ -187,12 +187,12 @@ def prepare_technical_indicators_for_db(
     # Dynamically extract WTI & Brent indicators
     wti_columns = (
         features_df.keys()
-        .intersection({f"WTI_{col}" for col in TECHNICAL_INDICATORS})
+        .intersection({f"wti_{col}" for col in TECHNICAL_INDICATORS})
         .to_list()
     )
     brent_columns = (
         features_df.keys()
-        .intersection({f"Brent_{col}" for col in TECHNICAL_INDICATORS})
+        .intersection({f"brent_{col}" for col in TECHNICAL_INDICATORS})
         .to_list()
     )
 
@@ -276,10 +276,16 @@ def prepare_features_for_db(
         "symbol_feature"
     ].str.split("_", n=1, expand=True)
 
+    features_long.loc[
+        features_long["symbol_feature"] == "wti-brent spread", "feature_name"
+    ] = "spread"
+
+    features_long.loc[
+        features_long["symbol_feature"] == "wti-brent spread", "symbol"
+    ] = "wti-brent"
+
     # rearrange the columns in features table
-    features_long = features_long[
-        ["date", "symbol", "feature_name", "feature_value"]
-    ]
+    features_long = features_long[COMMODITY_FEATURES_TABLE_COLUMNS[:4]]
 
     # Handle potential NaNs before insertion
     features_long = features_long.where(pd.notna(features_long), None)
@@ -292,8 +298,8 @@ def prepare_features_for_db(
         value_name="feature_value",
     )
 
-    # Assign `"INVENTORY"` as the symbol
-    inventory_long["symbol"] = "INVENTORY"
+    # Assign `"inventory"` as the symbol
+    inventory_long["symbol"] = "inventory"
 
     # Merge both DataFrames to ensure all features are included
     final_features = pd.concat(
