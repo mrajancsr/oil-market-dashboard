@@ -163,7 +163,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         # Insert Technical Indicators if data exists
         if not technical_indicators_df.empty:
             await async_logger.info(
-                f"Preparing to insert {len(technical_indicators_df)} rows into commodity.technical_indicators"
+                f"Preparing to insert {len(technical_indicators_df)} rows into commodity.technical_indicators"  # noqa
             )
             tasks.append(
                 push_with_logging(
@@ -178,7 +178,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         # Insert Features if data exists
         if not features_long.empty:
             await async_logger.info(
-                f"Preparing to insert {len(features_long)} rows into commodity.features"
+                f"Preparing to insert {len(features_long)} rows into commodity.features"  # noqa
             )
             tasks.append(
                 push_with_logging(
@@ -193,7 +193,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         # Insert Price Data if available
         if not data_frames[DataSourceType.YAHOO_FINANCE.name].empty:
             await async_logger.info(
-                f"Preparing to insert {len(data_frames[DataSourceType.YAHOO_FINANCE.name])} rows into commodity.price_data"
+                f"Preparing to insert {len(data_frames[DataSourceType.YAHOO_FINANCE.name])} rows into commodity.price_data"  # noqa
             )
             tasks.append(
                 push_with_logging(
@@ -208,7 +208,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         # Insert Inventory Data if available
         if not data_frames[DataSourceType.EIA.name].empty:
             await async_logger.info(
-                f"Preparing to insert {len(data_frames[DataSourceType.EIA.name])} rows into commodity.inventory_data"
+                f"Preparing to insert {len(data_frames[DataSourceType.EIA.name])} rows into commodity.inventory_data"  # noqa
             )
             tasks.append(
                 push_with_logging(
@@ -223,7 +223,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         # Insert Rig Count Data if available
         if not data_frames[DataSourceType.BAKER_HUGHES.name].empty:
             await async_logger.info(
-                f"Preparing to insert {len(data_frames[DataSourceType.BAKER_HUGHES.name])} rows into commodity.rig_count_data"
+                f"Preparing to insert {len(data_frames[DataSourceType.BAKER_HUGHES.name])} rows into commodity.rig_count_data"  # noqa
             )
             tasks.append(
                 push_with_logging(

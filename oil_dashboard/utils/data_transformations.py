@@ -169,7 +169,7 @@ def prepare_technical_indicators_for_db(
 
     This function:
     - Extracts technical indicators for WTI & Brent dynamically
-    - Converts data into long format ('date', 'symbol', 'indicator_name', 'value')
+    - Converts data into long format ('date', 'symbol', 'indicator_name', 'value') # noqa
     - Pivots back to wide format (`date`, `symbol`, `ma50`, `rsi`, etc.)
     - Ensures missing values are stored as `NULL` for PostgreSQL compatibility
 
@@ -181,7 +181,8 @@ def prepare_technical_indicators_for_db(
     Returns
     -------
     pd.DataFrame
-        Wide-Format DataFrmae with (`date`, `symbol`, `ma50`, `rsi`, `macd`, etc.)
+        Wide-Format DataFrmae with
+        (`date`, `symbol`, `ma50`, `rsi`, `macd`, etc.)
     """
 
     # Dynamically extract WTI & Brent indicators
@@ -241,7 +242,8 @@ def prepare_features_for_db(
 ) -> pd.DataFrame:
     """Prepare feature data for insertion into the PostgreSQL database
 
-    Converts price-based, technical indactors and inventory features into long format
+    Converts price-based, technical indactors and inventory features
+    into long format
 
     Parameters
     ----------
@@ -271,7 +273,7 @@ def prepare_features_for_db(
         value_name="feature_value",
     )
 
-    # Extract symbol name (e.g., WTI, Brent) and feature name dynamically for non-inventory features
+    # Extract symbol name (e.g., WTI, Brent) and feature name dynamically for non-inventory features # noqa
     features_long[["symbol", "feature_name"]] = features_long[
         "symbol_feature"
     ].str.split("_", n=1, expand=True)
