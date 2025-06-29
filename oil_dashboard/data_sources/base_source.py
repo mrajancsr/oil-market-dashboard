@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Optional
+
+import pandas as pd
 
 from oil_dashboard.config.data_source_config import DataSourceConfig
 
@@ -11,5 +14,5 @@ class DataSource(ABC):
     config: DataSourceConfig
 
     @abstractmethod
-    def fetch(self):
+    def fetch(self) -> Optional[pd.DataFrame]:
         pass

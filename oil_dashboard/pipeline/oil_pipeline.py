@@ -98,12 +98,14 @@ class OilPipeLine:
         """
         configs: List[DataSourceConfig] = self.generate_data_source_configs()
 
-        data_frames = {}
+        data_frames: Dict[str, pd.DataFrame] = {}
         for config in configs:
             data_source: DataSource = DataSourceFactory.create_data_source(
                 config
             )
             df = data_source.fetch()
+            if not isinstance(df, pd.DataFrame):
+                continue
             data_frames[config.source_type.name] = df
 
         return data_frames

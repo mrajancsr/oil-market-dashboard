@@ -83,8 +83,8 @@ def generate_features(
     if oil_data.empty or oil_inventory.empty:
         raise ValueError("Data Not Available for feature engineering")
 
-    oil_data.index = pd.to_datetime(oil_data.index)
-    oil_inventory.index = pd.to_datetime(oil_inventory.index)
+    oil_data.index = pd.to_datetime(oil_data.index)  # type: ignore
+    oil_inventory.index = pd.to_datetime(oil_inventory.index)  # type: ignore
 
     # Rename Close Price Columns Before Computing Price Based Features
     rename_map = {
@@ -101,7 +101,7 @@ def generate_features(
     inventory_daily = add_inventory_based_features(oil_inventory)
 
     # merge to master DataFrame
-    master_df = oil_data.join(inventory_daily, how="outer").ffill()
+    master_df = oil_data.join(inventory_daily, how="outer").ffill()  # type: ignore
 
     # Add technical indicators via helper function
     master_df = add_technical_indicators(master_df, columns=["wti", "brent"])

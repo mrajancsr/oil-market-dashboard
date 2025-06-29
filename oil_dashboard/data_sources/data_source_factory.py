@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 
-from oil_dashboard.config.data_source_config import DataSourceConfig, DataSourceType
+from oil_dashboard.config.data_source_config import (
+    DataSourceConfig,
+    DataSourceType,
+)
 from oil_dashboard.data_sources.baker_hughes_source import BakerHughesSource
 from oil_dashboard.data_sources.base_source import DataSource
 from oil_dashboard.data_sources.eia_source import EIASource

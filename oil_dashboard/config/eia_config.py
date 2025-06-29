@@ -1,4 +1,6 @@
-EIA_CRUDE_INVENTORY_REQUEST_PARAMS = {
+from typing import Any, Dict
+
+EIA_CRUDE_INVENTORY_REQUEST_PARAMS: Dict[str, Any] = {
     "frequency": "weekly",
     "data[0]": ["value"],  # This is key — asks for actual values
     "facets[product][]": ["EPC0"],  # Crude Oil

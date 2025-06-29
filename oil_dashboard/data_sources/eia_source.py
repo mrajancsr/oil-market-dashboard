@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any, Dict, List
 
 import pandas as pd
 import requests
@@ -24,6 +25,12 @@ class EIASource(DataSource):
         if not self.config.api_key or not self.config.base_url:
             raise ValueError("EIA API and base url must be provided")
 
+        if not self.config.request_params:
+            raise ValueError("request parameters must be provided")
+
+        if not self.config.start_date or not self.config.end_date:
+            raise ValueError("start date and end date must be provided")
+
         params = self.config.request_params.copy()
         params["api_key"] = self.config.api_key
         params["start"] = self.config.start_date.strftime("%Y-%m-%d")
@@ -40,16 +47,16 @@ class EIASource(DataSource):
         if "response" not in data or "data" not in data["response"]:
             raise Exception("Unexpected response format")
 
-        records = data["response"]["data"]
+        records: List[Dict[str, Any]] = data["response"]["data"]
 
         if not records:
             raise Exception("No inventory data returned.")
 
-        inventory_data = pd.DataFrame.from_records(records)
+        inventory_data = pd.DataFrame(records)
 
         # Ensure 'period' is datetime and set as index
-        inventory_data["period"] = pd.to_datetime(inventory_data["period"])
-        inventory_data.set_index("period", inplace=True)
+        inventory_data["period"] = pd.to_datetime(inventory_data["period"])  # type: ignore
+        inventory_data.set_index("period", inplace=True)  # type: ignore
 
         # Keep only the relevant column, rename it, and ensure data type
         inventory_data = inventory_data[["value"]]
@@ -60,6 +67,6 @@ class EIASource(DataSource):
             "crude_oil_inventory"
         ].astype(int)
 
-        inventory_data.dropna(inplace=True)
+        inventory_data.dropna(inplace=True)  # type: ignore
 
         return inventory_data
