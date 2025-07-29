@@ -25,8 +25,8 @@ async def schema_exists(db_reader: AsyncDBHandler, schema_name: str) -> bool:
     FROM information_schema.schemata
     WHERE schema_name = $1;
     """
-    result = await db_reader.fetch(query, schema_name)
-    return result is not None
+    result = await db_reader.fetch(query, schema_name)  # type: ignore
+    return len(result) != 0
 
 
 async def read_sql_file(file_path: str):
@@ -60,7 +60,7 @@ async def main():
         else:
             print(f"Schema {schema_name} not found.  Running init_db sql")
             sql = await read_sql_file(file_path)
-            await reader.execute(sql)
+            await reader.execute(sql)  # type: ignore
 
 
 if __name__ == "__main__":

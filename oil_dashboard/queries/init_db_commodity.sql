@@ -1,5 +1,5 @@
 -- Connect to the database
-\c securities_master;
+
 
 -- Create schema
 CREATE SCHEMA IF NOT EXISTS commodity;

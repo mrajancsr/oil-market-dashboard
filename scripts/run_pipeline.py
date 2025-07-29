@@ -1,7 +1,8 @@
 import asyncio
 import os
 from datetime import date
-from typing import Dict, List
+from types import CoroutineType
+from typing import Any, Dict, List
 
 import pandas as pd
 import uvloop
@@ -30,55 +31,6 @@ from oil_dashboard.utils.data_transformations import (
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
-async def push_with_logging(
-    handler: AsyncDBHandler,
-    table_name: str,
-    schema_name: str,
-    columns: List[str],
-    data: pd.DataFrame,
-) -> None:
-    """
-    Inserts a Pandas DataFrame into a PostgreSQL table asynchronously
-    and logs the number of rows inserted.
-
-    This function:
-    - Converts the given DataFrame into a tuple format for bulk insertion.
-    - Asynchronously inserts data into the specified table.
-    - Uses aiologger for non-blocking logging to avoid slowing down execution
-
-    Parameters
-    ----------
-    handler : AsyncDBHandler
-        The database handler responsible for executing the insert operation.
-    table_name : str
-        The name of the table where the data will be inserted.
-    schema_name : str
-        The schema to which the table belongs.
-    columns : List[str]
-        A list of column names corresponding to the table.
-    data : pd.DataFrame
-        The DataFrame containing the data to be inserted.
-
-    Returns
-    -------
-    None
-        This function performs an asynchronous database insert operation
-        and logs the result, but does not return any values.
-    """
-
-    num_rows = len(data)  # Get row count before conversion
-
-    # Convert DataFrame to tuples & push to database
-    await handler.push(
-        table_name, schema_name, columns, data.itertuples(index=False)
-    )
-
-    # Non-blocking logging with aiologger
-    await async_logger.info(
-        f"Inserted {num_rows} rows into {schema_name}.{table_name}"
-    )
-
-
 async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
     """
     Processes, transforms, and asynchronously inserts various data sources
@@ -99,7 +51,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
     """
     # Check if there's data to process
     if not data_frames:
-        await async_logger.warning(
+        await async_logger.warning(  # type: ignore
             "No data found. Skipping database insertion."
         )
         return
@@ -116,7 +68,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
     ]
 
     if missing_sources:
-        await async_logger.error(
+        await async_logger.error(  # type: ignore
             f"Missing required data sources: {', '.join(missing_sources)}. \
                 Skipping database insertion."
         )
@@ -126,7 +78,7 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
     async with AsyncDBHandler(config) as handler:
         # Generate Features **before** storing in PostgreSQL
-        await async_logger.info("Generating Features...")
+        await async_logger.info("Generating Features...")  # type: ignore
         features_df = generate_features(data_frames).reset_index()
         features_df.rename(columns={"index": "date"}, inplace=True)
 
@@ -136,7 +88,9 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         )
 
         # Extract Price Columns for Features
-        PRICE_COLUMNS = data_frames[DataSourceType.YAHOO_FINANCE.name].columns
+        PRICE_COLUMNS = set(
+            data_frames[DataSourceType.YAHOO_FINANCE.name].columns
+        )
         features_long = prepare_features_for_db(features_df, PRICE_COLUMNS)
         # Reshape & Insert Price Data
         data_frames[DataSourceType.YAHOO_FINANCE.name] = (
@@ -158,16 +112,15 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
         )
 
         # Store all tasks in a list before executing
-        tasks = []
+        tasks: List[CoroutineType[Any, Any, None]] = []
 
         # Insert Technical Indicators if data exists
         if not technical_indicators_df.empty:
-            await async_logger.info(
+            await async_logger.info(  # type: ignore
                 f"Preparing to insert {len(technical_indicators_df)} rows into commodity.technical_indicators"  # noqa
             )
             tasks.append(
-                push_with_logging(
-                    handler,
+                handler.push(
                     SQLTableType.TECHNICAL_INDICATORS.value,
                     SQLTableType.SCHEMA_NAME.value,
                     TECHNICAL_INDICATORS_TABLE_COLUMNS,
@@ -177,12 +130,11 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
         # Insert Features if data exists
         if not features_long.empty:
-            await async_logger.info(
+            await async_logger.info(  # type: ignore
                 f"Preparing to insert {len(features_long)} rows into commodity.features"  # noqa
             )
             tasks.append(
-                push_with_logging(
-                    handler,
+                handler.push(
                     SQLTableType.FEATURES.value,
                     SQLTableType.SCHEMA_NAME.value,
                     COMMODITY_FEATURES_TABLE_COLUMNS,
@@ -192,12 +144,11 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
         # Insert Price Data if available
         if not data_frames[DataSourceType.YAHOO_FINANCE.name].empty:
-            await async_logger.info(
+            await async_logger.info(  # type: ignore
                 f"Preparing to insert {len(data_frames[DataSourceType.YAHOO_FINANCE.name])} rows into commodity.price_data"  # noqa
             )
             tasks.append(
-                push_with_logging(
-                    handler,
+                handler.push(
                     SQLTableType.PRICE_DATA.value,
                     SQLTableType.SCHEMA_NAME.value,
                     PRICE_DATA_TABLE_COLUMNS,
@@ -207,12 +158,11 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
         # Insert Inventory Data if available
         if not data_frames[DataSourceType.EIA.name].empty:
-            await async_logger.info(
+            await async_logger.info(  # type: ignore
                 f"Preparing to insert {len(data_frames[DataSourceType.EIA.name])} rows into commodity.inventory_data"  # noqa
             )
             tasks.append(
-                push_with_logging(
-                    handler,
+                handler.push(
                     SQLTableType.INVENTORY_DATA.value,
                     SQLTableType.SCHEMA_NAME.value,
                     ["date", "product", "inventory"],
@@ -222,12 +172,11 @@ async def save_to_db(data_frames: Dict[str, pd.DataFrame]) -> None:
 
         # Insert Rig Count Data if available
         if not data_frames[DataSourceType.BAKER_HUGHES.name].empty:
-            await async_logger.info(
+            await async_logger.info(  # type: ignore
                 f"Preparing to insert {len(data_frames[DataSourceType.BAKER_HUGHES.name])} rows into commodity.rig_count_data"  # noqa
             )
             tasks.append(
-                push_with_logging(
-                    handler,
+                handler.push(
                     SQLTableType.RIG_COUNT_DATA.value,
                     SQLTableType.SCHEMA_NAME.value,
                     RIG_COUNT_DATA_TABLE_COLUMNS,

@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from typing import Optional
 
@@ -14,6 +15,7 @@ from oil_dashboard.data_sources.base_source import DataSource
 @dataclass
 class YahooFinanceSource(DataSource):
     config: DataSourceConfig
+    cache_dir: str = "data/cache"
 
     def __post_init__(self):
         if self.config.source_type != DataSourceType.YAHOO_FINANCE:
@@ -35,6 +37,24 @@ class YahooFinanceSource(DataSource):
 
         tickers = list(ticker_map.keys())
 
+        os.makedirs(self.cache_dir, exist_ok=True)
+
+        # Generate a cache filename
+        cache_file = os.path.join(
+            self.cache_dir, f"{'_'.join(tickers)}_{start}_{end}.csv"
+        )
+
+        path_to_cache_file = os.path.join(os.getcwd(), cache_file)
+
+        if os.path.exists(path_to_cache_file):
+            print(f"[CACHE HIT] Loading Yahoo data from {cache_file}")
+            df = pd.read_csv(
+                path_to_cache_file, parse_dates=["date"], index_col="date"
+            )
+            return df
+
+        print(f"[FETCH] Downloading {tickers} from Yahoo Finance")
+
         # get the close price
         oil_data: Optional[pd.DataFrame] = yf.download(  # type: ignore
             tickers,
@@ -52,4 +72,7 @@ class YahooFinanceSource(DataSource):
                 "_".join(col).strip() for col in oil_data.columns
             ]
             oil_data.rename(columns=str.lower, inplace=True)
+
+            # save to cache
+            oil_data.to_csv(path_to_cache_file)
             return oil_data
